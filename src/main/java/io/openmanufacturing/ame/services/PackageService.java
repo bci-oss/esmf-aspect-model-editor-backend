@@ -32,6 +32,7 @@ import io.openmanufacturing.ame.repository.ModelResolverRepository;
 import io.openmanufacturing.ame.repository.model.LocalPackageInfo;
 import io.openmanufacturing.ame.repository.strategy.LocalFolderResolverStrategy;
 import io.openmanufacturing.ame.repository.strategy.ModelResolverStrategy;
+import io.openmanufacturing.ame.repository.strategy.utils.LocalFolderResolverUtils;
 import io.openmanufacturing.ame.resolver.file.FileSystemStrategy;
 import io.openmanufacturing.ame.services.model.FileInformation;
 import io.openmanufacturing.ame.services.model.MissingFileInfo;
@@ -109,7 +110,8 @@ public class PackageService {
          final List<String> fileLocations = aspectModelFiles.stream()
                                                             .map( aspectModelFile -> strategy.saveModel(
                                                                   Optional.empty(),
-                                                                  strategy.getModel( aspectModelFile, storagePath ),
+                                                                  strategy.getModelAsString( aspectModelFile,
+                                                                        storagePath ),
                                                                   ApplicationSettings.getMetaModelStoragePath() )
                                                             ).collect( Collectors.toList() );
 
@@ -136,14 +138,33 @@ public class PackageService {
 
          // Save all aspect models to export storage path
          aspectModelFiles.forEach( aspectModelFileName -> {
-            final String aspectModel = strategy.getModel( aspectModelFileName,
-                  ApplicationSettings.getMetaModelStoragePath() );
-            strategy.saveModel( Optional.empty(), aspectModel, storagePath );
+            final LocalFolderResolverUtils.FolderStructure folderStructure = LocalFolderResolverUtils.extractFilePath(
+                  aspectModelFileName );
+
+            final String absoluteAspectModelPath =
+                  ApplicationSettings.getMetaModelStoragePath() + File.separator + folderStructure.toString();
+
+            final File aspectModelStoragePath = new File(
+                  storagePath + File.separator + folderStructure.getFileRootPath() + File.separator
+                        + folderStructure.getVersion() );
+
+            if ( !aspectModelStoragePath.exists() ) {
+               aspectModelStoragePath.mkdir();
+            }
+
+            try {
+               FileUtils.copyFileToDirectory( new File( absoluteAspectModelPath ), aspectModelStoragePath );
+            } catch ( final IOException e ) {
+               throw new FileNotFoundException(
+                     String.format( "Cannot copy file %s to %s", folderStructure.getFileName(),
+                           aspectModelStoragePath ) );
+            }
          } );
 
          // Validate all aspect models from export storage path and create export package model
          aspectModelFiles.forEach( aspectModelFileName -> {
-            final String aspectModel = strategy.getModel( aspectModelFileName, storagePath );
+            final String aspectModel = strategy.getModelAsString( aspectModelFileName, storagePath );
+
             final ValidationReport validationReport = ModelUtils.validateModel( aspectModel, storagePath,
                   aspectModelValidator );
 
