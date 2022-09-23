@@ -205,7 +205,7 @@ public class ModelServiceTest {
          strategyUtilities.when( () -> LocalFolderResolverStrategy.transformToValidModelDirectory( any() ) )
                           .thenReturn( storagePath );
 
-         final Namespaces namespaces = modelService.migrateWorkspace( storagePath, storagePath );
+         final Namespaces namespaces = modelService.migrateWorkspace( storagePath );
 
          assertEquals( 2, namespaces.namespaces.size() );
          assertEquals( "io.migrate-workspace-one:1.0.0", namespaces.namespaces.get( 0 ).versionedNamespace );
