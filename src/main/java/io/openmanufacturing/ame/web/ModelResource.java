@@ -109,15 +109,8 @@ public class ModelResource {
     * @return A list of Aspect Models that are migrated or not.
     */
    @GetMapping( path = "migrate-workspace" )
-   public ResponseEntity<Namespaces> migrateWorkspace(
-         @RequestParam( value = "namespaceUpdate", required = false, defaultValue = "false" )
-         final boolean namespaceUpdate ) {
-      final String desPath = namespaceUpdate ?
-            ApplicationSettings.getMigrationStoragePath() :
-            ApplicationSettings.getMetaModelStoragePath();
-
-      return ResponseEntity.ok(
-            modelService.migrateWorkspace( ApplicationSettings.getMetaModelStoragePath(), desPath ) );
+   public ResponseEntity<Namespaces> migrateWorkspace() {
+      return ResponseEntity.ok( modelService.migrateWorkspace( ApplicationSettings.getMetaModelStoragePath() ) );
    }
 
    /**

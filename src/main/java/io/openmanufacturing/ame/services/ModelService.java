@@ -14,7 +14,6 @@
 package io.openmanufacturing.ame.services;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +23,6 @@ import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Service;
 
 import io.openmanufacturing.ame.config.ApplicationSettings;
-import io.openmanufacturing.ame.exceptions.FileNotFoundException;
 import io.openmanufacturing.ame.repository.ModelResolverRepository;
 import io.openmanufacturing.ame.repository.strategy.LocalFolderResolverStrategy;
 import io.openmanufacturing.ame.repository.strategy.ModelResolverStrategy;
@@ -94,36 +92,25 @@ public class ModelService {
       return ModelUtils.migrateModel( aspectModel, storagePath );
    }
 
-   public Namespaces migrateWorkspace( final String storagePath, final String destPath ) {
-      try {
-         final ModelResolverStrategy strategy = modelResolverRepository.getStrategy(
-               LocalFolderResolverStrategy.class );
-         final File storageDirectory = new File( storagePath );
-         final File destDirectory = new File( destPath );
+   public Namespaces migrateWorkspace( final String storagePath ) {
+      final ModelResolverStrategy strategy = modelResolverRepository.getStrategy( LocalFolderResolverStrategy.class );
+      final File storageDirectory = new File( storagePath );
 
-         if ( !storageDirectory.equals( destDirectory ) ) {
-            FileUtils.deleteDirectory( destDirectory );
-            FileUtils.copyDirectory( storageDirectory, destDirectory );
-         }
+      final String[] extensions = { "ttl" };
 
-         final String[] extensions = { "ttl" };
+      final List<Namespace> namespaces = new ArrayList<>();
 
-         final List<Namespace> namespaces = new ArrayList<>();
-
-         FileUtils.listFiles( destDirectory, extensions, true )
-                  .stream()
-                  .map( File::getAbsoluteFile )
-                  .forEach( inputFile -> {
+      FileUtils.listFiles( storageDirectory, extensions, true ).stream().map( File::getAbsoluteFile )
+               .forEach( inputFile -> {
+                  if ( !inputFile.getName().equals( "latest.ttl" ) ) {
                      final Try<VersionedModel> versionedModels = updateModelVersion( inputFile );
                      final AspectModelUrn aspectModelUrn = strategy.convertFileToUrn( inputFile );
                      final Namespace namespace = resolveNamespace( namespaces, aspectModelUrn );
-                     namespaceFileInfo( namespace, versionedModels, aspectModelUrn, destPath );
-                  } );
+                     namespaceFileInfo( namespace, versionedModels, aspectModelUrn, storagePath );
+                  }
+               } );
 
-         return new Namespaces( namespaces );
-      } catch ( final IOException e ) {
-         throw new FileNotFoundException( String.format( "Cannot copy directory %s to %s", storagePath, destPath ) );
-      }
+      return new Namespaces( namespaces );
    }
 
    private Try<VersionedModel> updateModelVersion( final File inputFile ) {
@@ -132,10 +119,8 @@ public class ModelService {
 
    private Namespace resolveNamespace( final List<Namespace> namespaces, final AspectModelUrn aspectModelUrn ) {
       final String versionedNamespace = aspectModelUrn.getNamespace() + ":" + aspectModelUrn.getVersion();
-      final Optional<Namespace> first = namespaces.stream()
-                                                  .filter( namespace -> namespace.versionedNamespace.equals(
-                                                        versionedNamespace ) )
-                                                  .findFirst();
+      final Optional<Namespace> first = namespaces.stream().filter(
+            namespace -> namespace.versionedNamespace.equals( versionedNamespace ) ).findFirst();
 
       return first.orElseGet( () -> {
          final Namespace namespace = new Namespace( versionedNamespace );
@@ -145,10 +130,10 @@ public class ModelService {
    }
 
    private void namespaceFileInfo( final Namespace namespace, final Try<VersionedModel> model,
-         final AspectModelUrn aspectModelUrn, final String destPath ) {
+         final AspectModelUrn aspectModelUrn, final String storagePath ) {
 
       if ( model.isSuccess() ) {
-         saveVersionedModel( model.get(), aspectModelUrn, destPath );
+         saveVersionedModel( model.get(), aspectModelUrn, storagePath );
       }
 
       final AspectModelFile aspectModelFile = new AspectModelFile( aspectModelUrn.getName() + ModelUtils.TTL_EXTENSION,
