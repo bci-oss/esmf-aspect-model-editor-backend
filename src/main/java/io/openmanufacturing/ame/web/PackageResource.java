@@ -18,6 +18,7 @@ import java.util.Objects;
 
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -115,6 +116,6 @@ public class PackageResource {
    public ResponseEntity<Void> backupWorkspace() {
       packageService.backupWorkspace( ApplicationSettings.getMetaModelStoragePath(),
             ApplicationSettings.getAspectModelEditorStoragePath() );
-      return ResponseEntity.ok().build();
+      return new ResponseEntity<>( HttpStatus.CREATED );
    }
 }
