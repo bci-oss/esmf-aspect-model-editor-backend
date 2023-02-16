@@ -47,8 +47,10 @@ public class GenerateResource {
     * @return the aspect model definition as documentation html file.
     */
    @PostMapping( "documentation" )
-   public ResponseEntity<byte[]> generateHtml( @RequestBody final String aspectModel ) throws IOException {
-      return ResponseEntity.ok( generateService.generateHtmlDocument( aspectModel, ValidationProcess.GENERATE ) );
+   public ResponseEntity<byte[]> generateHtml( @RequestBody final String aspectModel,
+         @RequestParam( name = "language" ) final String language ) throws IOException {
+      return ResponseEntity.ok(
+            generateService.generateHtmlDocument( aspectModel, language, ValidationProcess.GENERATE ) );
    }
 
    /**
@@ -89,6 +91,7 @@ public class GenerateResource {
     */
    @PostMapping( "open-api-spec" )
    public ResponseEntity<String> openApiSpec( @RequestBody final String aspectModel,
+         @RequestParam( name = "language" ) final String language,
          @RequestParam( name = "output", defaultValue = "yaml" ) final String output,
          @RequestParam( name = "baseUrl", defaultValue = "https://open-manufacturing.org" ) final String baseUrl,
          @RequestParam( name = "includeQueryApi", defaultValue = "false" ) final boolean includeQueryApi,
@@ -97,9 +100,11 @@ public class GenerateResource {
          final Optional<PagingOption> pagingOption ) {
 
       final String openApiOutput = output.equals( "json" ) ?
-            generateService.generateJsonOpenApiSpec( aspectModel, baseUrl, includeQueryApi, useSemanticVersion,
+            generateService.generateJsonOpenApiSpec( language, aspectModel, baseUrl, includeQueryApi,
+                  useSemanticVersion,
                   pagingOption ) :
-            generateService.generateYamlOpenApiSpec( aspectModel, baseUrl, includeQueryApi, useSemanticVersion,
+            generateService.generateYamlOpenApiSpec( language, aspectModel, baseUrl, includeQueryApi,
+                  useSemanticVersion,
                   pagingOption );
 
       return ResponseEntity.ok( openApiOutput );

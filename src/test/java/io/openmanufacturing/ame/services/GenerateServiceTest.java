@@ -94,7 +94,7 @@ class GenerateServiceTest {
          utilities.when( () -> LocalFolderResolverStrategy.transformToValidModelDirectory( any() ) )
                   .thenReturn( storagePath.toString() );
 
-         final String payload = generateService.generateJsonOpenApiSpec(
+         final String payload = generateService.generateJsonOpenApiSpec( "en",
                Files.readString( storagePath, StandardCharsets.UTF_8 ), "https://test.com", false, false,
                Optional.of( PagingOption.TIME_BASED_PAGING ) );
 
@@ -114,7 +114,7 @@ class GenerateServiceTest {
          utilities.when( () -> LocalFolderResolverStrategy.transformToValidModelDirectory( any() ) )
                   .thenReturn( storagePath.toString() );
 
-         final String payload = generateService.generateYamlOpenApiSpec(
+         final String payload = generateService.generateYamlOpenApiSpec( "en",
                Files.readString( storagePath, StandardCharsets.UTF_8 ), "https://test.com", false, false,
                Optional.of( PagingOption.TIME_BASED_PAGING ) );
 
