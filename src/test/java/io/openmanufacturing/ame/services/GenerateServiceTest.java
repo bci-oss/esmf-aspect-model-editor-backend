@@ -80,7 +80,7 @@ class GenerateServiceTest {
          Mockito.when( validationProcess.getPath() ).thenReturn( resourcesPath );
 
          final String payload = generateService.jsonSchema( Files.readString( storagePath, StandardCharsets.UTF_8 ),
-               validationProcess );
+               validationProcess, "en-EN" );
          assertTrue( payload.contains( "#/components/schemas/urn_bamm_io.openmanufacturing_1.0.0_Characteristic" ) );
       }
    }

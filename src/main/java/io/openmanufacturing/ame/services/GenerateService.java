@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.Locale;
 import java.util.Optional;
 
+import org.apache.commons.lang3.LocaleUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -66,12 +67,13 @@ public class GenerateService {
       return byteArrayOutputStream.toByteArray();
    }
 
-   public String jsonSchema( final String aspectModel, final ValidationProcess validationProcess ) {
+   public String jsonSchema( final String aspectModel, final ValidationProcess validationProcess,
+         final String language ) {
       try {
          final AspectContext aspectContext = generateAspectContext( aspectModel, validationProcess );
 
          final AspectModelJsonSchemaGenerator generator = new AspectModelJsonSchemaGenerator();
-         final JsonNode jsonSchema = generator.apply( aspectContext.aspect(), new Locale( "en", "EN" ) );
+         final JsonNode jsonSchema = generator.apply( aspectContext.aspect(), Locale.forLanguageTag( language ) );
 
          final ByteArrayOutputStream out = new ByteArrayOutputStream();
          final ObjectMapper objectMapper = new ObjectMapper();
@@ -115,7 +117,7 @@ public class GenerateService {
 
          return generator.applyForYaml( ModelUtils.resolveAspectFromModel( aspectModel, ValidationProcess.MODELS ),
                useSemanticVersion, baseUrl, Optional.empty(), Optional.empty(), includeQueryApi, pagingOption,
-               new Locale( language ) );
+               Locale.forLanguageTag( language ) );
       } catch ( final IOException e ) {
          LOG.error( "YAML OpenAPI specification could not be generated." );
          throw new InvalidAspectModelException( "Error generating YAML OpenAPI specification", e );
@@ -129,7 +131,7 @@ public class GenerateService {
 
          final JsonNode json = generator.applyForJson(
                ModelUtils.resolveAspectFromModel( aspectModel, ValidationProcess.MODELS ), useSemanticVersion, baseUrl,
-               Optional.empty(), Optional.empty(), includeQueryApi, pagingOption, new Locale( language ) );
+               Optional.empty(), Optional.empty(), includeQueryApi, pagingOption, LocaleUtils.toLocale( language ) );
 
          final ByteArrayOutputStream out = new ByteArrayOutputStream();
          final ObjectMapper objectMapper = new ObjectMapper();

@@ -71,8 +71,9 @@ public class GenerateResource {
     * @return The JSON Schema
     */
    @PostMapping( "json-schema" )
-   public ResponseEntity<String> jsonSchema( @RequestBody final String aspectModel ) {
-      return ResponseEntity.ok( generateService.jsonSchema( aspectModel, ValidationProcess.GENERATE ) );
+   public ResponseEntity<String> jsonSchema( @RequestBody final String aspectModel,
+         @RequestParam( name = "language" ) final String language ) {
+      return ResponseEntity.ok( generateService.jsonSchema( aspectModel, ValidationProcess.GENERATE, language ) );
    }
 
    /**
