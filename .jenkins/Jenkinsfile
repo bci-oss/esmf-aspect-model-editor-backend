@@ -27,6 +27,7 @@ pipeline {
                         }
 
                         echo "Artifact URL Win: ${env.artifact_url_win}"
+                        echo "Artifact URL Mac: ${env.artifact_url_mac}"
                         echo "Version: ${env.version}"
                     } else {
                         echo "Error: parameters.txt does not exist."
@@ -63,12 +64,55 @@ pipeline {
             }
         }
 
-        stage('Release signed Windows to GitHub Releases') {
+        stage('Download Mac artifact') {
             steps {
                 script {
+                    def githubArtifact = "ame-backend-v${env.version}-mac.zip"
+                    def macOsFile = "ame-backend-v${env.version}-mac.zip"
+
+                    sh "mkdir -p unpack_mac_dir"
+                    sh "curl -L -H 'Accept: application/vnd.github.v3+json' \
+                        -H 'Authorization: Bearer ${GITHUB_BOT_TOKEN}' \
+                        '${env.artifact_url_mac}' \
+                        --output '${githubArtifact}'"
+                    sh "unzip -o '${githubArtifact}'"
+                    sh "unzip -o ${macOsFile} -d unpack_mac_dir"
+                    sh "mv unpack_mac_dir/ame-backend-v${env.version}-mac.app unpack_mac_dir/Ame-Backend.app"
+                    sh "rm '${githubArtifact}'"
+                    sh "rm '${macOsFile}'"
+                    sh "ls -lh ."
+                }
+            }
+        }
+
+        stage('Sign Electron Application on Mac') {
+            steps {
+                script {
+                    nodejs(nodeJSInstallationName: 'node_20.x') {
+                    sh '''
+                      echo "NPM version:"
+                      npm --version
+                      npm install isbinaryfile@5
+                      cd core
+                      chmod +x ./scripts/sign.sh
+                      chmod +x e./scripts/notarize.sh
+                      node ./scripts/after-pack.js
+                    '''
+              }
+            }
+          }
+        }
+
+        stage('Release signed Windows and Mac artifact to GitHub Releases') {
+            steps {
+                script {
+                    def macOsFile = "ame-backend-v${env.version}-mac.zip"
+                    sh "mv unpack_mac_dir/notarized.zip ./${macOsFile}"
+
                     def repo = "eclipse-esmf/esmf-aspect-model-editor-backend"
                     def tagName = "v${env.version}"
                     def fileNameWin = "ame-backend-v${env.version}-win.zip"
+                    def fileNameMac = "ame-backend-v${env.version}-mac.zip"
                     def releaseId = ""
 
                     def tagExists = sh(script: """
@@ -106,6 +150,16 @@ pipeline {
                          -H "Content-Type: application/octet-stream" \
                          --data-binary @${fileNameWin} \
                          "https://uploads.github.com/repos/${repo}/releases/${releaseId}/assets?name=${fileNameWin}"
+                    """
+
+                    sh """
+                    curl -L \
+                         -X POST \
+                         -H "Accept: application/vnd.github+json" \\
+                         -H "Authorization: Bearer \$GITHUB_BOT_TOKEN" \
+                         -H "Content-Type: application/octet-stream" \
+                         --data-binary @${fileNameMac} \
+                         "https://uploads.github.com/repos/${repo}/releases/${releaseId}/assets?name=${fileNameMac}"
                     """
 
                     sh """
