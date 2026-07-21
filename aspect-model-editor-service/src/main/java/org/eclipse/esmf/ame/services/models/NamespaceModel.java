@@ -13,24 +13,24 @@
 
 package org.eclipse.esmf.ame.services.models;
 
-import java.net.URI;
+import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.serde.annotation.Serdeable;
-import org.jspecify.annotations.Nullable;
 
 /**
- * Response object containing an aspect model and its metadata.
- * <p>
- * This record encapsulates the content of an aspect model file along with
- * optional information about its source location.
+ * Represents a single aspect model within a namespace and version.
  *
- * @param content the aspect model content as a string (e.g., in Turtle format)
- * @param sourceLocation a URI indicating the original location of the aspect model file
+ * @param name the model name or content
+ * @param aspectModelUrn the URN of the aspect model
+ * @param version the version of the model
+ * @param exists indicates whether the model already exists in the workspace
  */
 @Serdeable
 @Introspected
-@JsonInclude( JsonInclude.Include.ALWAYS )
-public record ModelResponse( String content, @Nullable URI sourceLocation ) {}
-
+public record NamespaceModel(
+      String name,
+      AspectModelUrn aspectModelUrn,
+      String version,
+      boolean exists
+) {}

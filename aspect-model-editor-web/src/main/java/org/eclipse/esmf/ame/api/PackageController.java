@@ -18,11 +18,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.esmf.ame.constants.ApplicationConstants;
 import org.eclipse.esmf.ame.exceptions.FileNotFoundException;
 import org.eclipse.esmf.ame.exceptions.FileReadException;
+import org.eclipse.esmf.ame.security.FileNameSanitizer;
 import org.eclipse.esmf.ame.services.PackageService;
 import org.eclipse.esmf.ame.services.models.Version;
-import org.eclipse.esmf.ame.utils.ModelUtils;
 
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
@@ -42,14 +43,13 @@ import org.apache.commons.io.FilenameUtils;
  * Controller class that supports the importing and exporting of the Aspect Model packages.
  */
 @Controller( "package" )
-
 public class PackageController {
-   public static final String URN = "aspect-model-urn";
-
    private final PackageService packageService;
+   private final FileNameSanitizer fileNameSanitizer;
 
-   public PackageController( final PackageService packageService ) {
+   public PackageController( final PackageService packageService, final FileNameSanitizer fileNameSanitizer ) {
       this.packageService = packageService;
+      this.fileNameSanitizer = fileNameSanitizer;
    }
 
    /**
@@ -60,10 +60,11 @@ public class PackageController {
     */
    @Get( "/export" )
    @Produces( MediaType.APPLICATION_ZIP )
-   public HttpResponse<byte[]> exportPackage( @Header( URN ) final Optional<String> urn ) {
-      final Optional<String> optionalUrn = urn.map( ModelUtils::sanitizeFileInformation );
+   public HttpResponse<byte[]> exportPackage( @Header( ApplicationConstants.Headers.URN ) final Optional<String> urn ) {
+      final Optional<String> optionalUrn = urn.map( fileNameSanitizer::sanitize );
 
-      final String aspectModelUrn = optionalUrn.orElseThrow( () -> new FileNotFoundException( "Please specify an aspect model urn" ) );
+      final String aspectModelUrn = optionalUrn.orElseThrow(
+            () -> new FileNotFoundException( ApplicationConstants.ErrorMessages.SPECIFY_ASPECT_MODEL_URN ) );
 
       return HttpResponse.ok().header( HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=package.zip" )
             .body( packageService.exportPackage( aspectModelUrn ) ).contentType( MediaType.APPLICATION_ZIP );

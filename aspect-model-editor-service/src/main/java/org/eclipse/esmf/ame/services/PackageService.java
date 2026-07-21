@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.eclipse.esmf.ame.constants.ApplicationConstants;
 import org.eclipse.esmf.ame.exceptions.CreateFileException;
 import org.eclipse.esmf.ame.exceptions.FileHandlingException;
 import org.eclipse.esmf.ame.services.models.Version;
@@ -92,10 +93,10 @@ public class PackageService {
 
          final List<File> list = saveAspectModelFiles( changeManager.aspectModelFiles() ).map( File::new ).toList();
 
-         return new ModelGroupingUtils( aspectModelLoader, aspectModelValidator ).groupModelsByNamespaceAndVersion( list, false );
+         return new ModelGroupingUtils( aspectModelLoader, aspectModelValidator ).groupModelsByNamespaceAndVersion( list );
       } catch ( final ValueParsingException | IOException e ) {
          if ( e instanceof ValueParsingException ) {
-            throw new FileHandlingException( "The structure inside the .zip file does not match the expected format." );
+            throw new FileHandlingException( "The structure inside the " + ApplicationConstants.FileExtensions.ZIP + " file does not match the expected format." );
          } else {
             throw new FileHandlingException( "Could not read from input", e );
          }
@@ -104,8 +105,12 @@ public class PackageService {
 
    private AddAspectModelFile createAddChange( final AspectModelFile file, final ModelsRoot modelsRoot ) {
       if ( file.sourceModel().isEmpty() ) {
-         // TODO check why this will not returend ...
-         throw new FileHandlingException( "Source model is empty for file: " + file );
+         // Source model should always be present after loading from package
+         // This indicates a malformed file in the package
+         final String fileName = file.filename().orElse( "unknown" );
+         LOG.warn( "Source model is empty for file: {} with namespace: {}", fileName, file.namespaceUrn() );
+         throw new FileHandlingException( String.format(
+               "Source model is empty for file '%s'. The package may be malformed or corrupted.", fileName ) );
       }
 
       final URI targetLocation = modelsRoot.directoryForNamespace( file.namespaceUrn() ).resolve( file.filename().orElseThrow() ).toUri();
@@ -136,12 +141,12 @@ public class PackageService {
       try {
          final SimpleDateFormat sdf = new SimpleDateFormat( "yyyy.MM.dd-HH.mm.ss" );
          final String timestamp = sdf.format( new Timestamp( System.currentTimeMillis() ) );
-         final String zipFileName = modelPath.resolve( "backup-" + timestamp + ".zip" ).toString();
+         final String zipFileName = modelPath.resolve( "backup-" + timestamp + ApplicationConstants.FileExtensions.ZIP ).toString();
 
          try ( final ZipOutputStream zos = new ZipOutputStream( new FileOutputStream( zipFileName ) );
                final Stream<Path> paths = Files.walk( modelPath ) ) {
 
-            paths.filter( Files::isRegularFile ).filter( path -> path.toString().endsWith( ".ttl" ) ).forEach( filePath -> {
+            paths.filter( Files::isRegularFile ).filter( path -> path.toString().endsWith( ApplicationConstants.FileExtensions.TTL ) ).forEach( filePath -> {
                try {
                   final ZipEntry zipEntry = new ZipEntry( modelPath.relativize( filePath ).toString() );
                   zos.putNextEntry( zipEntry );

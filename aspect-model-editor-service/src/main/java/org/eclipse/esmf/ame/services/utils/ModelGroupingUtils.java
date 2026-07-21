@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.eclipse.esmf.ame.exceptions.FileReadException;
-import org.eclipse.esmf.ame.services.models.Model;
+import org.eclipse.esmf.ame.services.models.NamespaceModel;
 import org.eclipse.esmf.ame.services.models.Version;
 import org.eclipse.esmf.aspectmodel.AspectModelFile;
 import org.eclipse.esmf.aspectmodel.loader.AspectModelLoader;
@@ -50,6 +50,7 @@ import org.apache.jena.vocabulary.RDF;
  * A utility class for grouping model URIs by namespace and version.
  *
  * @param aspectModelLoader the loader for aspect models
+ * @param aspectModelValidator the validator for aspect models
  */
 public record ModelGroupingUtils( AspectModelLoader aspectModelLoader, AspectModelValidator aspectModelValidator ) {
    /**
@@ -62,31 +63,29 @@ public record ModelGroupingUtils( AspectModelLoader aspectModelLoader, AspectMod
     * Groups model URIs by namespace and version, setting the existing field as specified.
     *
     * @param uriStream a stream of model URIs
-    * @param onlyAspectModels get only Aspect Models with Aspects as namespace list.
     * @return a map where the keys are namespaces and the values are lists of maps containing versions and their associated models
     */
-   public Map<String, List<Version>> groupModelsByNamespaceAndVersion( final Stream<URI> uriStream, final boolean onlyAspectModels ) {
-      return this.groupModelsByNamespaceAndVersion( uriStream.map( File::new ).toList(), onlyAspectModels );
+   public Map<String, List<Version>> groupModelsByNamespaceAndVersion( final Stream<URI> uriStream ) {
+      return this.groupModelsByNamespaceAndVersion( uriStream.map( File::new ).toList() );
    }
 
    /**
     * Groups model URIs by namespace and version, setting the existing field as specified.
     *
     * @param files a List of model Files
-    * @param onlyAspectModels get only Aspect Models with Aspects as namespace list.
     * @return a map where the keys are namespaces and the values are lists of maps containing versions and their associated models
     */
-   public Map<String, List<Version>> groupModelsByNamespaceAndVersion( final List<File> files, final boolean onlyAspectModels ) {
-      final List<Model> allModels = loadAndExtractModels( files, onlyAspectModels );
-      final Map<String, List<Model>> modelsByNamespace = groupByNamespace( allModels );
+   public Map<String, List<Version>> groupModelsByNamespaceAndVersion( final List<File> files ) {
+      final List<NamespaceModel> allModels = loadAndExtractModels( files );
+      final Map<String, List<NamespaceModel>> modelsByNamespace = groupByNamespace( allModels );
 
       return modelsByNamespace.entrySet().stream().sorted( Map.Entry.comparingByKey() ).collect(
             Collectors.toMap( Map.Entry::getKey, entry -> groupByVersion( entry.getValue() ), this::throwOnDuplicateKey,
                   LinkedHashMap::new ) );
    }
 
-   private List<Model> loadAndExtractModels( final List<File> files, final boolean onlyAspectModels ) {
-      return files.stream().map( this::loadModelWithVersion ).flatMap( entry -> extractModelsFromEntry( entry, onlyAspectModels ) )
+   private List<NamespaceModel> loadAndExtractModels( final List<File> files ) {
+      return files.stream().map( this::loadModelWithVersion ).flatMap( entry -> extractModelsFromEntry( entry ) )
             .toList();
    }
 
@@ -115,8 +114,7 @@ public record ModelGroupingUtils( AspectModelLoader aspectModelLoader, AspectMod
             .flatMap( KnownVersion::fromVersionString );
    }
 
-   private Stream<Model> extractModelsFromEntry( final Map.Entry<RawAspectModelFile, Optional<KnownVersion>> entry,
-         final boolean onlyAspectModels ) {
+   private Stream<NamespaceModel> extractModelsFromEntry( final Map.Entry<RawAspectModelFile, Optional<KnownVersion>> entry ) {
       final KnownVersion version = entry.getValue().orElseThrow( () -> new IllegalStateException( "Meta model version is required" ) );
       final RawAspectModelFile rawFile = entry.getKey();
 
@@ -124,7 +122,8 @@ public record ModelGroupingUtils( AspectModelLoader aspectModelLoader, AspectMod
       final List<Resource> resources = collectMetaModelResources( version );
       final Resource firstNonBlankSubject = findFirstNonBlankSubject( rawFile.sourceModel(), resources, filename );
 
-      final Model model = new Model( filename, AspectModelUrn.fromUrn( firstNonBlankSubject.getURI() ), version.toVersionString(), true );
+      final NamespaceModel model = new NamespaceModel( filename, AspectModelUrn.fromUrn( firstNonBlankSubject.getURI() ),
+            version.toVersionString(), true );
 
       return Stream.of( model );
    }
@@ -151,7 +150,7 @@ public record ModelGroupingUtils( AspectModelLoader aspectModelLoader, AspectMod
             .orElseThrow( () -> new IllegalStateException( "No non-blank subject found in " + filename ) );
    }
 
-   private Map<String, List<Model>> groupByNamespace( final List<Model> models ) {
+   private Map<String, List<NamespaceModel>> groupByNamespace( final List<NamespaceModel> models ) {
       return models.stream().collect( Collectors.groupingBy( model -> model.aspectModelUrn().getNamespaceMainPart() ) );
    }
 
@@ -170,25 +169,26 @@ public record ModelGroupingUtils( AspectModelLoader aspectModelLoader, AspectMod
       return file.elements().stream().filter( element -> !element.isAnonymous() ).findAny();
    }
 
-   private List<Version> groupByVersion( final List<Model> models ) {
-      final Map<AspectModelUrn, Model> uniqueModels = removeDuplicateModels( models );
-      final Map<String, List<Model>> modelsByVersion = groupModelsByVersionString( uniqueModels );
+   private List<Version> groupByVersion( final List<NamespaceModel> models ) {
+      final Map<AspectModelUrn, NamespaceModel> uniqueModels = removeDuplicateModels( models );
+      final Map<String, List<NamespaceModel>> modelsByVersion = groupModelsByVersionString( uniqueModels );
 
       return modelsByVersion.entrySet().stream().sorted( Map.Entry.comparingByKey() ).map( this::createVersionEntry ).toList();
    }
 
-   private Map<AspectModelUrn, Model> removeDuplicateModels( final List<Model> models ) {
+   private Map<AspectModelUrn, NamespaceModel> removeDuplicateModels( final List<NamespaceModel> models ) {
       return models.stream()
-            .collect( Collectors.toMap( Model::aspectModelUrn, model -> model, ( existing, duplicate ) -> existing, LinkedHashMap::new ) );
+            .collect( Collectors.toMap( NamespaceModel::aspectModelUrn, model -> model, ( existing, duplicate ) -> existing,
+                  LinkedHashMap::new ) );
    }
 
-   private Map<String, List<Model>> groupModelsByVersionString( final Map<AspectModelUrn, Model> uniqueModels ) {
+   private Map<String, List<NamespaceModel>> groupModelsByVersionString( final Map<AspectModelUrn, NamespaceModel> uniqueModels ) {
 
       return uniqueModels.values().stream().collect( Collectors.groupingBy( model -> model.aspectModelUrn().getVersion() ) );
    }
 
-   private Version createVersionEntry( final Map.Entry<String, List<Model>> entry ) {
-      final List<Model> sortedModels = entry.getValue().stream().sorted( Comparator.comparing( Model::model ) ).toList();
+   private Version createVersionEntry( final Map.Entry<String, List<NamespaceModel>> entry ) {
+      final List<NamespaceModel> sortedModels = entry.getValue().stream().sorted( Comparator.comparing( NamespaceModel::name ) ).toList();
       return new Version( entry.getKey(), sortedModels );
    }
 

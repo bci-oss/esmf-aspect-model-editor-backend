@@ -11,20 +11,23 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-package org.eclipse.esmf.ame.utils;
+package org.eclipse.esmf.ame.security;
 
 import java.io.File;
 
 import org.eclipse.esmf.ame.exceptions.FileHandlingException;
 
-/**
- * Utility class for handling model-related operations.
- * Provides methods for sanitizing file information to prevent path traversal attacks.
- */
-public class ModelUtils {
+import jakarta.inject.Singleton;
 
-   private ModelUtils() {
-   }
+/**
+ * Service responsible for sanitizing file names to prevent path traversal attacks.
+ * <p>
+ * This service ensures that file names do not contain directory separators or
+ * relative path components that could be used for malicious purposes.
+ * </p>
+ */
+@Singleton
+public class FileNameSanitizer {
 
    /**
     * Sanitizes the file name to remove any path information and retain only the base file name.
@@ -34,9 +37,13 @@ public class ModelUtils {
     *
     * @param fileInformation The file name string potentially including path information.
     * @return The sanitized base file name without any path components.
-    * @throws FileHandlingException If the file contains path information´s.
+    * @throws FileHandlingException If the file contains path information.
     */
-   public static String sanitizeFileInformation( final String fileInformation ) {
+   public String sanitize( final String fileInformation ) {
+      if ( fileInformation == null || fileInformation.isEmpty() ) {
+         throw new FileHandlingException( "File information must not be null or empty" );
+      }
+
       if ( fileInformation.contains( File.separator ) || fileInformation.contains( ".." ) ) {
          throw new FileHandlingException(
                "Invalid file information: The provided string must not contain directory separators or relative path components." );
@@ -45,3 +52,4 @@ public class ModelUtils {
       return new File( fileInformation ).getName();
    }
 }
+

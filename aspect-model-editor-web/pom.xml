@@ -40,10 +40,6 @@
          <groupId>org.eclipse.esmf</groupId>
          <artifactId>aspect-model-editor-validation</artifactId>
       </dependency>
-      <dependency>
-         <groupId>org.eclipse.esmf</groupId>
-         <artifactId>aspect-model-editor-web-core</artifactId>
-      </dependency>
 
       <!-- ESMF dependencies -->
       <dependency>

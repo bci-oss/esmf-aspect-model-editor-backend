@@ -54,12 +54,10 @@
       <dependency>
          <groupId>com.fasterxml.jackson.core</groupId>
          <artifactId>jackson-annotations</artifactId>
-         <version>${jackson-annotations.version}</version>
       </dependency>
       <dependency>
          <groupId>com.fasterxml.jackson.core</groupId>
          <artifactId>jackson-databind</artifactId>
-         <version>${jackson-databind2.version}</version>
       </dependency>
       <dependency>
          <groupId>io.micronaut</groupId>

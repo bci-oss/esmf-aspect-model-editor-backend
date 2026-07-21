@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.eclipse.esmf.ame.exceptions.UrnNotFoundException;
@@ -51,6 +52,7 @@ import org.eclipse.esmf.aspectmodel.shacl.violation.SparqlConstraintViolation;
 import org.eclipse.esmf.aspectmodel.shacl.violation.UniqueLanguageViolation;
 import org.eclipse.esmf.aspectmodel.shacl.violation.ValueFromListViolation;
 import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
+import org.eclipse.esmf.aspectmodel.validation.InvalidSyntaxViolation;
 import org.eclipse.esmf.aspectmodel.validation.ProcessingViolation;
 
 /**
@@ -79,8 +81,8 @@ public class ViolationFormatter
    }
 
    private List<Violation> filterNonSemanticViolations( final List<Violation> violations ) {
-      return violations.stream().filter( violation -> ValidationUtils.isInvalidSyntaxViolation().test( violation )
-            || ValidationUtils.isProcessingViolation().test( violation ) ).toList();
+      return violations.stream().filter( violation -> isInvalidSyntaxViolation().test( violation )
+            || isProcessingViolation().test( violation ) ).toList();
    }
 
    protected List<ViolationError> processNonSemanticViolation( final List<Violation> violations,
@@ -317,5 +319,25 @@ public class ViolationFormatter
 
    public ViolationError visitInvalidSyntaxViolation( final String invalidSyntaxViolation ) {
       return new ViolationError( invalidSyntaxViolation );
+   }
+
+   /**
+    * Creates a predicate that tests if a given violation is an invalid syntax violation.
+    *
+    * @return Predicate that can be used to filter invalid syntax violations
+    */
+   public static Predicate<Violation> isInvalidSyntaxViolation() {
+      return violation -> violation.errorCode() != null
+            && violation.errorCode().equals( InvalidSyntaxViolation.ERROR_CODE );
+   }
+
+   /**
+    * Creates a predicate that tests if a given violation is a processing violation.
+    *
+    * @return Predicate that can be used to filter processing violations
+    */
+   public static Predicate<Violation> isProcessingViolation() {
+      return violation -> violation.errorCode() != null
+            && violation.errorCode().equals( ProcessingViolation.ERROR_CODE );
    }
 }

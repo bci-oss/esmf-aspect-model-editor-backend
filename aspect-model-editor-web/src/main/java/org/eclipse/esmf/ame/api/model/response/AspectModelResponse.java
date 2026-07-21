@@ -11,22 +11,22 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-package org.eclipse.esmf.ame.services.models;
+package org.eclipse.esmf.ame.api.model.response;
 
-import java.util.List;
+import java.net.URI;
 
-import io.micronaut.core.annotation.Introspected;
 import io.micronaut.serde.annotation.Serdeable;
+import org.jspecify.annotations.Nullable;
 
 /**
- * Represents a version containing a list of namespace models.
+ * Response object containing aspect model data.
  *
- * @param version the version identifier
- * @param models list of namespace models associated with this version
+ * @param content The turtle content of the aspect model
+ * @param sourceLocation Optional source location of the model file
  */
 @Serdeable
-@Introspected
-public record Version(
-      String version,
-      List<NamespaceModel> models
+public record AspectModelResponse(
+      String content,
+      @Nullable URI sourceLocation
 ) {}
+

@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-package org.eclipse.esmf.ame.model;
+package org.eclipse.esmf.ame.api.model.response;
 
 import io.micronaut.serde.annotation.Serdeable;
 
