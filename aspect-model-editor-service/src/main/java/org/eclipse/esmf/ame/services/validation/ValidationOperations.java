@@ -19,8 +19,6 @@ import java.util.function.Predicate;
 import org.eclipse.esmf.ame.exceptions.FileReadException;
 import org.eclipse.esmf.aspectmodel.AspectModelFile;
 import org.eclipse.esmf.aspectmodel.shacl.violation.Violation;
-import org.eclipse.esmf.aspectmodel.validation.InvalidSyntaxViolation;
-import org.eclipse.esmf.aspectmodel.validation.ProcessingViolation;
 import org.eclipse.esmf.samm.KnownVersion;
 
 import jakarta.inject.Singleton;
@@ -58,25 +56,6 @@ public class ValidationOperations {
             .ifPresent( v -> { throw exception; } );
    }
 
-   /**
-    * Creates a predicate that tests if a given violation is an invalid syntax violation.
-    *
-    * @return Predicate that can be used to filter invalid syntax violations
-    */
-   public Predicate<Violation> isInvalidSyntaxViolation() {
-      return violation -> violation.errorCode() != null
-            && violation.errorCode().equals( InvalidSyntaxViolation.ERROR_CODE );
-   }
-
-   /**
-    * Creates a predicate that tests if a given violation is a processing violation.
-    *
-    * @return Predicate that can be used to filter processing violations
-    */
-   public Predicate<Violation> isProcessingViolation() {
-      return violation -> violation.errorCode() != null
-            && violation.errorCode().equals( ProcessingViolation.ERROR_CODE );
-   }
 
    /**
     * Extracts the SAMM (Semantic Aspect Meta Model) version from an AspectModelFile.

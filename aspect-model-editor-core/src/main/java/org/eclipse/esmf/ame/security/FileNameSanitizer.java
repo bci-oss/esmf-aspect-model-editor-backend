@@ -40,16 +40,21 @@ public class FileNameSanitizer {
     * @throws FileHandlingException If the file contains path information.
     */
    public String sanitize( final String fileInformation ) {
-      if ( fileInformation == null || fileInformation.isEmpty() ) {
+      if ( fileInformation == null || fileInformation.isBlank() ) {
          throw new FileHandlingException( "File information must not be null or empty" );
       }
 
-      if ( fileInformation.contains( File.separator ) || fileInformation.contains( ".." ) ) {
+      final String trimmed = fileInformation.trim();
+
+      if ( trimmed.contains( File.separator ) || trimmed.contains( "/" )
+            || trimmed.contains( "\\" ) || trimmed.contains( ".." )
+            || trimmed.contains( "\0" ) || trimmed.contains( "%" ) ) {
          throw new FileHandlingException(
-               "Invalid file information: The provided string must not contain directory separators or relative path components." );
+               "Invalid file information: The provided string must not contain directory separators, "
+                     + "relative path components, or encoded characters." );
       }
 
-      return new File( fileInformation ).getName();
+      return new File( trimmed ).getName();
    }
 }
 

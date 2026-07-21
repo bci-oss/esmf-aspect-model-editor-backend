@@ -87,6 +87,16 @@ public class ModelController {
             .orElseThrow( () -> new FileNotFoundException( ApplicationConstants.ErrorMessages.SPECIFY_ASPECT_MODEL_URN ) );
    }
 
+   private URI parseAndValidateUri( final Optional<String> optionalUri ) {
+      final String uriString = optionalUri.orElseThrow(
+            () -> new UriNotDefinedException( ApplicationConstants.ErrorMessages.INVALID_URI_FORMAT ) );
+      try {
+         return new URI( uriString );
+      } catch ( final URISyntaxException e ) {
+         throw new UriNotDefinedException( "Invalid URI format: " + e.getMessage() );
+      }
+   }
+
    /**
     * Method used to return a turtle file based on the header parameter: Aspect-Model-Urn which consists of
     * urn:samm:namespace:version#AspectModelElement
@@ -161,10 +171,9 @@ public class ModelController {
    @Post( uri = "validate", consumes = { MediaType.MULTIPART_FORM_DATA } )
    @Produces( MediaType.APPLICATION_JSON )
    public HttpResponse<ViolationReport> validateModel( @Header( ApplicationConstants.Headers.URI ) final Optional<String> optionalUri,
-         @Part( "aspectModel" ) final CompletedFileUpload aspectModel ) throws URISyntaxException {
-      final String uriString = optionalUri.orElseThrow(
-            () -> new UriNotDefinedException( ApplicationConstants.ErrorMessages.INVALID_URI_FORMAT ) );
-      return HttpResponse.ok( validationService.validate( new URI( uriString ), aspectModel ) ).contentType( MediaType.APPLICATION_JSON );
+         @Part( "aspectModel" ) final CompletedFileUpload aspectModel ) {
+      final URI uri = parseAndValidateUri( optionalUri );
+      return HttpResponse.ok( validationService.validate( uri, aspectModel ) ).contentType( MediaType.APPLICATION_JSON );
    }
 
    /**
@@ -176,10 +185,9 @@ public class ModelController {
    @Post( uri = "migrate", consumes = { MediaType.MULTIPART_FORM_DATA } )
    @Produces( MediaTypeExtension.TEXT_TURTLE_VALUE )
    public HttpResponse<String> migrateModel( @Header( ApplicationConstants.Headers.URI ) final Optional<String> optionalUri,
-         @Part( "aspectModel" ) final CompletedFileUpload aspectModel ) throws URISyntaxException {
-      final String uriString = optionalUri.orElseThrow(
-            () -> new UriNotDefinedException( ApplicationConstants.ErrorMessages.INVALID_URI_FORMAT ) );
-      return HttpResponse.ok( aspectModelMigrator.migrate( new URI( uriString ), aspectModel ) );
+         @Part( "aspectModel" ) final CompletedFileUpload aspectModel ) {
+      final URI uri = parseAndValidateUri( optionalUri );
+      return HttpResponse.ok( aspectModelMigrator.migrate( uri, aspectModel ) );
    }
 
    /**
@@ -191,10 +199,9 @@ public class ModelController {
    @Post( uri = "format", consumes = { MediaType.MULTIPART_FORM_DATA } )
    @Produces( MediaTypeExtension.TEXT_TURTLE_VALUE )
    public HttpResponse<String> getFormattedModel( @Header( ApplicationConstants.Headers.URI ) final Optional<String> optionalUri,
-         @Part( "aspectModel" ) final CompletedFileUpload aspectModel ) throws URISyntaxException {
-      final String uriString = optionalUri.orElseThrow(
-            () -> new UriNotDefinedException( ApplicationConstants.ErrorMessages.INVALID_URI_FORMAT ) );
-      return HttpResponse.ok( aspectModelMigrator.format( new URI( uriString ), aspectModel ) );
+         @Part( "aspectModel" ) final CompletedFileUpload aspectModel ) {
+      final URI uri = parseAndValidateUri( optionalUri );
+      return HttpResponse.ok( aspectModelMigrator.format( uri, aspectModel ) );
    }
 
    /**

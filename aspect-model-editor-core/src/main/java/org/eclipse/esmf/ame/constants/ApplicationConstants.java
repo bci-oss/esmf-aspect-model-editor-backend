@@ -79,5 +79,16 @@ public final class ApplicationConstants {
       private OutputFormats() {
       }
    }
+
+   /**
+    * URI scheme constants
+    */
+   public static final class Schemes {
+      public static final String BLOB = "blob";
+      public static final String FILE = "file";
+
+      private Schemes() {
+      }
+   }
 }
 

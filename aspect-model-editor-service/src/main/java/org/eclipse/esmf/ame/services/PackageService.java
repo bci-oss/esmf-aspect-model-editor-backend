@@ -20,8 +20,8 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -63,8 +63,10 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class PackageService {
    private static final Logger LOG = LoggerFactory.getLogger( PackageService.class );
+   private static final DateTimeFormatter BACKUP_TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern( "yyyy.MM.dd-HH.mm.ss" );
 
    private final AspectModelLoader aspectModelLoader;
+   private final AspectModelValidator aspectModelValidator;
    private final Path modelPath;
 
    public PackageService( final AspectModelLoader aspectModelLoader, final Path modelPath,
@@ -139,8 +141,7 @@ public class PackageService {
 
    public void backupWorkspace() {
       try {
-         final SimpleDateFormat sdf = new SimpleDateFormat( "yyyy.MM.dd-HH.mm.ss" );
-         final String timestamp = sdf.format( new Timestamp( System.currentTimeMillis() ) );
+         final String timestamp = LocalDateTime.now().format( BACKUP_TIMESTAMP_FORMAT );
          final String zipFileName = modelPath.resolve( "backup-" + timestamp + ApplicationConstants.FileExtensions.ZIP ).toString();
 
          try ( final ZipOutputStream zos = new ZipOutputStream( new FileOutputStream( zipFileName ) );
@@ -163,6 +164,4 @@ public class PackageService {
          throw new CreateFileException( "An error occurred while creating the zip file.", e );
       }
    }
-
-   private final AspectModelValidator aspectModelValidator;
 }

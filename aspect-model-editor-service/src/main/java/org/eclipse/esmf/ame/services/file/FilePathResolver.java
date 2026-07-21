@@ -19,6 +19,7 @@ import java.nio.file.Paths;
 import java.util.stream.StreamSupport;
 
 import org.eclipse.esmf.ame.constants.ApplicationConstants;
+import org.eclipse.esmf.ame.exceptions.FileHandlingException;
 import org.eclipse.esmf.ame.services.models.FileEntry;
 import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 
@@ -68,6 +69,11 @@ public class FilePathResolver {
     * @return the resolved Path
     */
    public Path resolveFromRelativePath( final Path modelPath, final String relativePath ) {
+      // Reject dangerous patterns early
+      if ( relativePath.contains( ".." ) || relativePath.contains( "\0" ) ) {
+         throw new FileHandlingException( "Invalid path: contains illegal characters or path traversal patterns" );
+      }
+
       final Path path = Paths.get( relativePath.replace( ":", File.separator ) ).normalize();
       final String[] pathParts = StreamSupport.stream( path.spliterator(), false )
             .map( Path::toString )
@@ -78,7 +84,14 @@ public class FilePathResolver {
                "Relative path must contain at least namespace, version, and filename: " + relativePath );
       }
 
-      return constructModelPath( modelPath, pathParts[0], pathParts[1], pathParts[2] );
+      final Path resolved = constructModelPath( modelPath, pathParts[0], pathParts[1], pathParts[2] );
+
+      // Validate resolved path stays within base directory
+      if ( !resolved.normalize().startsWith( modelPath.normalize() ) ) {
+         throw new FileHandlingException( "Path traversal attempt detected: " + relativePath );
+      }
+
+      return resolved;
    }
 
    /**

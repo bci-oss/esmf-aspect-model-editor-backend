@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.esmf.ame.constants.ApplicationConstants;
 import org.eclipse.esmf.ame.exceptions.CreateFileException;
 import org.eclipse.esmf.ame.exceptions.FileHandlingException;
 import org.eclipse.esmf.ame.exceptions.InvalidAspectModelException;
@@ -137,7 +138,7 @@ public class AspectModelMigrator {
       return file.sourceLocation()
             .map( source -> {
                final String scheme = source.getScheme();
-               return "blob".equals( scheme ) || "file".equals( scheme );
+               return ApplicationConstants.Schemes.BLOB.equals( scheme ) || ApplicationConstants.Schemes.FILE.equals( scheme );
             } )
             .orElse( false );
    }
