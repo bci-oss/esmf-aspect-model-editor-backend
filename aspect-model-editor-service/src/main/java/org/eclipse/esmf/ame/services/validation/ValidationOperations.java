@@ -18,7 +18,7 @@ import java.util.function.Predicate;
 
 import org.eclipse.esmf.ame.exceptions.FileReadException;
 import org.eclipse.esmf.aspectmodel.AspectModelFile;
-import org.eclipse.esmf.aspectmodel.shacl.violation.Violation;
+import org.eclipse.esmf.aspectmodel.Violation;
 import org.eclipse.esmf.samm.KnownVersion;
 
 import jakarta.inject.Singleton;

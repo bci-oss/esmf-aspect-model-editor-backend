@@ -20,7 +20,6 @@ import org.eclipse.esmf.ame.repository.AspectModelRepository;
 import org.eclipse.esmf.ame.validation.model.ViolationError;
 import org.eclipse.esmf.ame.validation.model.ViolationReport;
 import org.eclipse.esmf.ame.validation.services.ViolationFormatter;
-import org.eclipse.esmf.aspectmodel.shacl.violation.Violation;
 import org.eclipse.esmf.aspectmodel.validation.services.AspectModelValidator;
 import org.eclipse.esmf.metamodel.AspectModel;
 
@@ -61,8 +60,8 @@ public class AspectModelValidationService {
 
       try {
          final AspectModel aspectModel = aspectModelRepository.loadFromUpload( upload, uri );
-         final List<Violation> violations = aspectModelValidator.validateModel( aspectModel );
-         final List<ViolationError> violationErrors = violationFormatter.apply( violations );
+         final org.eclipse.esmf.aspectmodel.ViolationReport violationReport = aspectModelValidator.validateModel( aspectModel );
+         final List<ViolationError> violationErrors = violationFormatter.apply( violationReport );
 
          LOG.info( "Validation completed with {} violations", violationErrors.size() );
          return new ViolationReport( violationErrors );
@@ -81,8 +80,8 @@ public class AspectModelValidationService {
    public ViolationReport validate( final AspectModel aspectModel ) {
       LOG.debug( "Validating aspect model directly" );
 
-      final List<Violation> violations = aspectModelValidator.validateModel( aspectModel );
-      final List<ViolationError> violationErrors = violationFormatter.apply( violations );
+      final org.eclipse.esmf.aspectmodel.ViolationReport violationReport = aspectModelValidator.validateModel( aspectModel );
+      final List<ViolationError> violationErrors = violationFormatter.apply( violationReport );
 
       LOG.info( "Validation completed with {} violations", violationErrors.size() );
       return new ViolationReport( violationErrors );
@@ -95,8 +94,8 @@ public class AspectModelValidationService {
     * @return true if the model is valid (no violations)
     */
    public boolean isValid( final AspectModel aspectModel ) {
-      final List<Violation> violations = aspectModelValidator.validateModel( aspectModel );
-      return violations.isEmpty();
+      final org.eclipse.esmf.aspectmodel.ViolationReport violationReport = aspectModelValidator.validateModel( aspectModel );
+      return violationReport.isEmpty();
    }
 }
 

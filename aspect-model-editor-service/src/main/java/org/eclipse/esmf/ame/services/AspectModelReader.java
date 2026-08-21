@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.eclipse.esmf.ame.constants.ApplicationConstants;
 import org.eclipse.esmf.ame.exceptions.FileNotFoundException;
@@ -26,10 +27,10 @@ import org.eclipse.esmf.ame.services.file.FilePathResolver;
 import org.eclipse.esmf.ame.services.models.AspectModelResult;
 import org.eclipse.esmf.aspectmodel.AspectModelFile;
 import org.eclipse.esmf.aspectmodel.UnsupportedVersionException;
+import org.eclipse.esmf.aspectmodel.Violation;
 import org.eclipse.esmf.aspectmodel.loader.AspectModelLoader;
 import org.eclipse.esmf.aspectmodel.resolver.exceptions.ModelResolutionException;
 import org.eclipse.esmf.aspectmodel.serializer.AspectSerializer;
-import org.eclipse.esmf.aspectmodel.shacl.violation.Violation;
 import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 import org.eclipse.esmf.aspectmodel.validation.services.AspectModelValidator;
 import org.eclipse.esmf.metamodel.AspectModel;
@@ -127,9 +128,9 @@ public class AspectModelReader {
    }
 
    private void validateBasicStructure( final AspectModel aspectModel ) {
-      final java.util.List<Violation> violations = aspectModelValidator.validateModel( aspectModel );
+      final List<Violation> violations = aspectModelValidator.validateModel( aspectModel ).violations();
       final boolean hasInvalidSyntax = violations.stream()
-            .anyMatch( v -> v.errorCode() != null && v.errorCode().contains( "INVALID_SYNTAX" ) );
+            .anyMatch( v -> v.code().code() != null && v.code().code().contains( "INVALID_SYNTAX" ) );
 
       if ( hasInvalidSyntax ) {
          throw new InvalidAspectModelException( "Aspect Model has invalid syntax" );

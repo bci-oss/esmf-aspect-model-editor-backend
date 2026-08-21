@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 
 import org.eclipse.esmf.ame.exceptions.UrnNotFoundException;
 import org.eclipse.esmf.ame.validation.model.ViolationError;
-import org.eclipse.esmf.ame.validation.utils.ValidationUtils;
 import org.eclipse.esmf.aspectmodel.Violation;
 import org.eclipse.esmf.aspectmodel.ViolationReport;
 import org.eclipse.esmf.aspectmodel.shacl.fix.Fix;
@@ -327,8 +326,8 @@ public class ViolationFormatter
     * @return Predicate that can be used to filter invalid syntax violations
     */
    public static Predicate<Violation> isInvalidSyntaxViolation() {
-      return violation -> violation.errorCode() != null
-            && violation.errorCode().equals( InvalidSyntaxViolation.ERROR_CODE );
+      return violation -> violation.code() != null
+            && violation.code().code().equals( InvalidSyntaxViolation.ERROR_CODE );
    }
 
    /**
@@ -337,7 +336,7 @@ public class ViolationFormatter
     * @return Predicate that can be used to filter processing violations
     */
    public static Predicate<Violation> isProcessingViolation() {
-      return violation -> violation.errorCode() != null
-            && violation.errorCode().equals( ProcessingViolation.ERROR_CODE );
+      return violation -> violation.code() != null
+            && violation.code().code().equals( ProcessingViolation.ERROR_CODE );
    }
 }

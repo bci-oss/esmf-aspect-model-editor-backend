@@ -27,9 +27,9 @@ import org.eclipse.esmf.ame.services.file.FilePathResolver;
 import org.eclipse.esmf.ame.services.validation.ValidationOperations;
 import org.eclipse.esmf.ame.validation.services.ViolationFormatter;
 import org.eclipse.esmf.aspectmodel.AspectModelFile;
+import org.eclipse.esmf.aspectmodel.Violation;
 import org.eclipse.esmf.aspectmodel.loader.AspectModelLoader;
 import org.eclipse.esmf.aspectmodel.serializer.AspectSerializer;
-import org.eclipse.esmf.aspectmodel.shacl.violation.Violation;
 import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 import org.eclipse.esmf.aspectmodel.validation.services.AspectModelValidator;
 import org.eclipse.esmf.metamodel.AspectModel;
@@ -133,7 +133,7 @@ public class AspectModelWriter {
    }
 
    private void validateForCreation( final Supplier<AspectModel> modelSupplier ) {
-      final List<Violation> violations = aspectModelValidator.validateModel( modelSupplier );
+      final List<Violation> violations = aspectModelValidator.validateModel( modelSupplier ).violations();
 
       validationOperations.throwIfViolationMatches(
             violations,
