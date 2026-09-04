@@ -159,7 +159,7 @@ jobs:
 
             unzip -p "$zstd_jar" "win/amd64/libzstd-jni-${version}.dll" > "./$bundle/app/libzstd-jni-${version}.dll"
             cp "./$bundle/app/libzstd-jni-${version}.dll" "./$bundle/app/zstd-jni-${version}.dll"
-          
+
             if [ -s "./$bundle/app/zstd-jni-${version}.dll" ]; then
               echo "Success extraction JNI"
             fi
