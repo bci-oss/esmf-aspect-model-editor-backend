@@ -24,6 +24,7 @@ import org.eclipse.esmf.ame.api.model.response.AspectModelResponse;
 import org.eclipse.esmf.ame.config.ApplicationSettings;
 import org.eclipse.esmf.ame.constants.ApplicationConstants;
 import org.eclipse.esmf.ame.exceptions.FileNotFoundException;
+import org.eclipse.esmf.ame.exceptions.InvalidAspectModelException;
 import org.eclipse.esmf.ame.exceptions.UriNotDefinedException;
 import org.eclipse.esmf.ame.security.FileNameSanitizer;
 import org.eclipse.esmf.ame.services.AspectModelMigrator;
@@ -83,8 +84,12 @@ public class ModelController {
    }
 
    private AspectModelUrn parseAspectModelUrn( final Optional<String> urn ) {
-      return urn.map( fileNameSanitizer::sanitize ).map( AspectModelUrn::from ).flatMap( Value::toJavaOptional )
+      final String urnString = urn.map( fileNameSanitizer::sanitize )
             .orElseThrow( () -> new FileNotFoundException( ApplicationConstants.ErrorMessages.SPECIFY_ASPECT_MODEL_URN ) );
+
+      return AspectModelUrn.from( urnString ).toJavaOptional()
+            .orElseThrow( () -> new InvalidAspectModelException(
+                  String.format( "Invalid Aspect Model URN format: '%s'. Expected format: 'urn:samm:<namespace>:<version>#<element>'", urnString ) ) );
    }
 
    private URI parseAndValidateUri( final Optional<String> optionalUri ) {

@@ -27,6 +27,8 @@ import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @MicronautTest
@@ -50,6 +52,35 @@ class AspectModelWriterTest {
 
    private static final String TEST_MODEL_FOR_SERVICE = "Movement";
    private static final String TEST_MODEL_TO_DELETE = "FileToDelete";
+
+   private String originalFileToDeleteContent;
+   private String originalMovementContent;
+
+   @BeforeEach
+   void setUp() throws IOException {
+      final Path fileToDelete = Path.of( TEST_NAMESPACE_PATH.toString(), TEST_MODEL_TO_DELETE + FILE_EXTENSION );
+      if ( Files.exists( fileToDelete ) ) {
+         originalFileToDeleteContent = Files.readString( fileToDelete, StandardCharsets.UTF_8 );
+      }
+      final Path movementFile = Path.of( TEST_NAMESPACE_PATH.toString(), TEST_MODEL_FOR_SERVICE + FILE_EXTENSION );
+      if ( Files.exists( movementFile ) ) {
+         originalMovementContent = Files.readString( movementFile, StandardCharsets.UTF_8 );
+      }
+   }
+
+   @AfterEach
+   void tearDown() throws IOException {
+      if ( originalFileToDeleteContent != null ) {
+         final Path fileToDelete = Path.of( TEST_NAMESPACE_PATH.toString(), TEST_MODEL_TO_DELETE + FILE_EXTENSION );
+         Files.writeString( fileToDelete, originalFileToDeleteContent, StandardCharsets.UTF_8 );
+      }
+      if ( originalMovementContent != null ) {
+         final Path movementFile = Path.of( TEST_NAMESPACE_PATH.toString(), TEST_MODEL_FOR_SERVICE + FILE_EXTENSION );
+         Files.writeString( movementFile, originalMovementContent, StandardCharsets.UTF_8 );
+      }
+      final Path newFilePath = Path.of( TEST_NAMESPACE_PATH.toString(), "TestNewModel" + FILE_EXTENSION );
+      Files.deleteIfExists( newFilePath );
+   }
 
    @Test
    void testDeleteModel() {

@@ -44,5 +44,17 @@
          <groupId>io.micronaut.serde</groupId>
          <artifactId>micronaut-serde-api</artifactId>
       </dependency>
+
+      <!-- Third party testing dependencies -->
+      <dependency>
+         <groupId>org.junit.jupiter</groupId>
+         <artifactId>junit-jupiter-engine</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <groupId>org.mockito</groupId>
+         <artifactId>mockito-inline</artifactId>
+         <scope>test</scope>
+      </dependency>
    </dependencies>
 </project>

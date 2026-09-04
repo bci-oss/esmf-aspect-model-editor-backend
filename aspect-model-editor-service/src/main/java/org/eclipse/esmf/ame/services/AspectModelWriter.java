@@ -21,6 +21,7 @@ import java.util.function.Supplier;
 import org.eclipse.esmf.ame.exceptions.CreateFileException;
 import org.eclipse.esmf.ame.exceptions.FileNotFoundException;
 import org.eclipse.esmf.ame.exceptions.FileReadException;
+import org.eclipse.esmf.ame.exceptions.InvalidAspectModelException;
 import org.eclipse.esmf.ame.repository.AspectModelRepository;
 import org.eclipse.esmf.ame.services.file.FileOperations;
 import org.eclipse.esmf.ame.services.file.FilePathResolver;
@@ -128,7 +129,7 @@ public class AspectModelWriter {
          LOG.info( "Model deleted successfully: {}", aspectModelUrn );
       } catch ( final Exception e ) {
          LOG.error( "Failed to delete model: {}", aspectModelUrn, e );
-         throw new FileNotFoundException( "Could not delete model: " + aspectModelUrn, e );
+         throw new FileNotFoundException( "Could not delete Aspect Model '" + aspectModelUrn + "': " + e.getMessage(), e );
       }
    }
 
@@ -138,12 +139,12 @@ public class AspectModelWriter {
       validationOperations.throwIfViolationMatches(
             violations,
             ViolationFormatter.isInvalidSyntaxViolation(),
-            new FileReadException(
+            new InvalidAspectModelException(
                   violations.stream()
                         .filter( ViolationFormatter.isInvalidSyntaxViolation() )
                         .findFirst()
-                        .map( Violation::message )
-                        .orElse( "Aspect Model is not valid" )
+                        .map( v -> "Aspect Model syntax error: " + v.message() )
+                        .orElse( "Aspect Model syntax is invalid" )
             )
       );
 
@@ -154,8 +155,8 @@ public class AspectModelWriter {
                   violations.stream()
                         .filter( ViolationFormatter.isProcessingViolation() )
                         .findFirst()
-                        .map( Violation::message )
-                        .orElse( "Processing violation" )
+                        .map( v -> "Aspect Model processing error: " + v.message() )
+                        .orElse( "Failed to process Aspect Model" )
             )
       );
    }

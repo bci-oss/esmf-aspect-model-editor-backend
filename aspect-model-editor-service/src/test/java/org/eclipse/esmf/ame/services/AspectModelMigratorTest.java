@@ -21,6 +21,13 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Stream;
 
 import org.eclipse.esmf.ame.model.MockFileUpload;
 import org.eclipse.esmf.ame.services.models.MigrationResult;
@@ -37,6 +44,8 @@ import io.micronaut.http.multipart.CompletedFileUpload;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @MicronautTest
@@ -112,6 +121,48 @@ class ModelServiceSpecialTest {
          NEW_VERSION );
    private static final Path MIGRATE_WORKSPACE_TWO_NEW_VERSION = Path.of( MIGRATION_WORKSPACE_PATH.toString(), "io.migrate-workspace-two",
          NEW_VERSION );
+
+   private Map<Path, byte[]> originalFiles;
+   private Set<Path> originalDirs;
+
+   @BeforeEach
+   void setUp() throws IOException {
+      originalFiles = new HashMap<>();
+      originalDirs = new HashSet<>();
+      try ( final Stream<Path> stream = Files.walk( MIGRATION_WORKSPACE_PATH ) ) {
+         stream.forEach( path -> {
+            try {
+               if ( Files.isRegularFile( path ) ) {
+                  originalFiles.put( path, Files.readAllBytes( path ) );
+               } else if ( Files.isDirectory( path ) ) {
+                  originalDirs.add( path );
+               }
+            } catch ( final IOException e ) {
+               throw new RuntimeException( e );
+            }
+         } );
+      }
+   }
+
+   @AfterEach
+   void tearDown() throws IOException {
+      if ( originalFiles == null ) {
+         return;
+      }
+      try ( final Stream<Path> stream = Files.walk( MIGRATION_WORKSPACE_PATH ) ) {
+         final List<Path> currentPaths = stream.sorted( Comparator.reverseOrder() ).toList();
+         for ( final Path path : currentPaths ) {
+            if ( Files.isRegularFile( path ) && !originalFiles.containsKey( path ) ) {
+               Files.deleteIfExists( path );
+            } else if ( Files.isDirectory( path ) && !originalDirs.contains( path ) ) {
+               Files.deleteIfExists( path );
+            }
+         }
+      }
+      for ( final Map.Entry<Path, byte[]> entry : originalFiles.entrySet() ) {
+         Files.write( entry.getKey(), entry.getValue() );
+      }
+   }
 
    @Test
    void testMigrateWorkspaceWithoutVersionUpgrade() throws IOException {

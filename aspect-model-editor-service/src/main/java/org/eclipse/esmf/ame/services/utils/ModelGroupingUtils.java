@@ -115,10 +115,11 @@ public record ModelGroupingUtils( AspectModelLoader aspectModelLoader, AspectMod
    }
 
    private Stream<NamespaceModel> extractModelsFromEntry( final Map.Entry<RawAspectModelFile, Optional<KnownVersion>> entry ) {
-      final KnownVersion version = entry.getValue().orElseThrow( () -> new IllegalStateException( "Meta model version is required" ) );
       final RawAspectModelFile rawFile = entry.getKey();
-
       final String filename = extractFilename( rawFile );
+      final KnownVersion version = entry.getValue().orElseThrow( () ->
+            new IllegalStateException( String.format( "Valid SAMM meta-model version is required in model file '%s'", filename ) ) );
+
       final List<Resource> resources = collectMetaModelResources( version );
       final Resource firstNonBlankSubject = findFirstNonBlankSubject( rawFile.sourceModel(), resources, filename );
 

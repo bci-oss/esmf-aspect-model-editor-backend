@@ -87,7 +87,8 @@ public class AspectModelMigrator {
             .filter( this::isFromValidSource )
             .findFirst()
             .map( AspectSerializer.INSTANCE::aspectModelFileToString )
-            .orElseThrow( () -> new InvalidAspectModelException( "No aspect model found to migrate" ) );
+            .orElseThrow( () -> new InvalidAspectModelException(
+                  String.format( "No valid Aspect Model found to migrate in the uploaded file with URI '%s'", uri ) ) );
    }
 
    /**
@@ -117,7 +118,7 @@ public class AspectModelMigrator {
          return new MigrationResult( true, errors );
       } catch ( final Exception e ) {
          LOG.error( "Workspace migration failed", e );
-         errors.add( e.getMessage() );
+         errors.add( "Workspace migration failed: " + ( e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName() ) );
          return new MigrationResult( false, errors );
       }
    }
@@ -161,7 +162,8 @@ public class AspectModelMigrator {
                AspectSerializer.INSTANCE.write( aspectModel );
             }
          } catch ( final Exception e ) {
-            final String errorMsg = String.format( "Error processing model: %s", model.name() );
+            final String errorMsg = String.format( "Error processing model '%s' in namespace '%s' (version %s): %s",
+                  model.name(), namespace, version.version(), e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName() );
             LOG.error( errorMsg, e );
             errors.add( errorMsg );
          }

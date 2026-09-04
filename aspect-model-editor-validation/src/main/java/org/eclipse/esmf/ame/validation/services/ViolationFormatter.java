@@ -136,12 +136,25 @@ public class ViolationFormatter
 
    public ViolationError visitProcessingViolation( final ProcessingViolation violation ) {
       final ViolationError violationError = visit( violation );
+      final Throwable cause = violation.cause().orElse( null );
 
-      if ( violation.cause().orElse( null ) instanceof final UrnNotFoundException urnNotFoundException ) {
+      if ( cause instanceof final UrnNotFoundException urnNotFoundException ) {
          violationError.setFocusNode( urnNotFoundException.getUrn() );
          violationError.setFix( List.of(
                "Ensure the referred element is available. If it's in a different model of the same namespace, include it in your "
                      + "workspace or the imported package." ) );
+      } else if ( cause instanceof final org.eclipse.esmf.aspectmodel.resolver.exceptions.ModelResolutionException modelResolutionException ) {
+         modelResolutionException.getCheckedLocations().stream().findFirst()
+               .flatMap( org.eclipse.esmf.aspectmodel.resolver.ModelResolutionViolation::element )
+               .ifPresent( violationError::setFocusNode );
+         violationError.setFix( List.of(
+               "The referenced element or model could not be resolved. Ensure that all referenced models are in the workspace with correct namespace and version structure." ) );
+      } else if ( cause instanceof org.eclipse.esmf.aspectmodel.UnsupportedVersionException ) {
+         violationError.setFix( List.of(
+               "The Aspect Model uses an unsupported SAMM version. Please migrate the model to a supported SAMM version (e.g., SAMM 2.1.0 or 2.2.0)." ) );
+      } else if ( cause instanceof org.eclipse.esmf.aspectmodel.resolver.exceptions.ParserException ) {
+         violationError.setFix( List.of(
+               "The Turtle syntax contains errors. Check for missing prefixes, commas, semicolons, or unclosed quotes/brackets." ) );
       }
 
       return violationError;

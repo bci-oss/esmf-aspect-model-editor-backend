@@ -71,13 +71,15 @@ public class ValidationOperations {
       final String sammPrefixUri = sourceModel.getNsPrefixURI( "samm" );
 
       if ( sammPrefixUri == null ) {
-         throw new FileReadException( "SAMM prefix URI not found in model" );
+         final String fileName = aspectModelFile.filename().orElse( "unknown" );
+         throw new FileReadException( String.format( "SAMM prefix '@prefix samm:' not found in model file '%s'", fileName ) );
       }
 
       return KnownVersion.fromVersionString(
                   sammPrefixUri.replaceAll( ".*meta-model:([\\d.]+)#", "$1" ) )
             .map( KnownVersion::toVersionString )
-            .orElseThrow( () -> new FileReadException( "Invalid SAMM version in model: " + sammPrefixUri ) );
+            .orElseThrow( () -> new FileReadException( String.format( "Unsupported or invalid SAMM meta-model version in prefix URI '%s' for file '%s'",
+                  sammPrefixUri, aspectModelFile.filename().orElse( "unknown" ) ) ) );
    }
 }
 

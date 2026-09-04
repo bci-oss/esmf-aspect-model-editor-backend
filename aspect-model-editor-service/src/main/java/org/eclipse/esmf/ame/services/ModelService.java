@@ -142,7 +142,7 @@ public class ModelService {
       final String fileName = aspectModelFile.filename().orElse( "" );
 
       final String fileKey = String.format( "%s:%s:%s", aspectModelUrn.getNamespaceMainPart(), aspectModelUrn.getVersion(),
-            aspectModelFile.filename().orElseThrow( () -> new FileReadException( "Filename missing" ) ) );
+            aspectModelFile.filename().orElseThrow( () -> new FileReadException( String.format( "Filename missing for Aspect Model with URN: %s", urn ) ) ) );
 
       return new FileInformation( fileKey, urn, sammVersion, AspectSerializer.INSTANCE.aspectModelFileToString( aspectModelFile ),
             fileName );
@@ -152,7 +152,10 @@ public class ModelService {
       try {
          return aspectModelFile.aspect().urn().toString();
       } catch ( final NoSuchElementException e ) {
-         return aspectModelFile.elements().getFirst().urn().toString();
+         if ( !aspectModelFile.elements().isEmpty() ) {
+            return aspectModelFile.elements().getFirst().urn().toString();
+         }
+         return aspectModelFile.namespaceUrn().toString();
       }
    }
 }

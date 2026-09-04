@@ -73,19 +73,28 @@ public class GenerateService {
       try {
          return aspectModel.getInputStream();
       } catch ( final IOException e ) {
-         throw new FileReadException( "Failed to read uploaded file" );
+         throw new FileReadException( "Failed to read uploaded file '" + aspectModel.getFilename() + "': " + e.getMessage(), e );
+      }
+   }
+
+   private org.eclipse.esmf.metamodel.Aspect extractAspect( final AspectModel aspectModel, final URI uri ) {
+      try {
+         return aspectModel.aspect();
+      } catch ( final java.util.NoSuchElementException e ) {
+         throw new GenerationException( String.format( "No Aspect element found in model '%s'. Generation requires an Aspect definition.", uri ) );
       }
    }
 
    public byte[] generateHtmlDocument( final CompletedFileUpload aspectModelFile, final URI uri, final String language ) {
       final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
       final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
 
       final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
       final DocumentationGenerationConfig config = DocumentationGenerationConfigBuilder.builder()
             .locale( Locale.forLanguageTag( language ) ).build();
-      final AspectModelDocumentationGenerator generator = new AspectModelDocumentationGenerator( aspectModel.aspect(), config );
+      final AspectModelDocumentationGenerator generator = new AspectModelDocumentationGenerator( aspect, config );
 
       generator.generate( artifactName -> byteArrayOutputStream );
       return byteArrayOutputStream.toByteArray();
@@ -94,11 +103,12 @@ public class GenerateService {
    public String jsonSchema( final CompletedFileUpload aspectModelFile, final URI uri, final String language ) {
       final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
       final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
 
       final JsonSchemaGenerationConfig config = JsonSchemaGenerationConfigBuilder.builder().locale(
             Locale.forLanguageTag( language ) ).build();
 
-      final AspectModelJsonSchemaGenerator generator = new AspectModelJsonSchemaGenerator( aspectModel.aspect(), config );
+      final AspectModelJsonSchemaGenerator generator = new AspectModelJsonSchemaGenerator( aspect, config );
 
       return generator.generateJson();
    }
@@ -106,8 +116,9 @@ public class GenerateService {
    public String sampleJSONPayload( final CompletedFileUpload aspectModelFile, final URI uri ) {
       final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
       final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
 
-      final AspectModelJsonPayloadGenerator generator = new AspectModelJsonPayloadGenerator( aspectModel.aspect() );
+      final AspectModelJsonPayloadGenerator generator = new AspectModelJsonPayloadGenerator( aspect );
 
       return generator.generateJson();
    }
@@ -115,8 +126,9 @@ public class GenerateService {
    public String generateAASXFile( final CompletedFileUpload aspectModelFile, final URI uri ) {
       final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
       final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
 
-      final AspectModelAasGenerator generator = new AspectModelAasGenerator( aspectModel.aspect(),
+      final AspectModelAasGenerator generator = new AspectModelAasGenerator( aspect,
             AasGenerationConfigBuilder.builder().format( AasFileFormat.AASX ).build() );
 
       return new String( generator.getContent() );
@@ -125,8 +137,9 @@ public class GenerateService {
    public String generateAasXmlFile( final CompletedFileUpload aspectModelFile, final URI uri ) {
       final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
       final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
 
-      final AspectModelAasGenerator generator = new AspectModelAasGenerator( aspectModel.aspect(),
+      final AspectModelAasGenerator generator = new AspectModelAasGenerator( aspect,
             AasGenerationConfigBuilder.builder().format( AasFileFormat.XML ).build() );
 
       return new String( generator.getContent() );
@@ -135,8 +148,9 @@ public class GenerateService {
    public String generateAasJsonFile( final CompletedFileUpload aspectModelFile, final URI uri ) {
       final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
       final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
 
-      final AspectModelAasGenerator generator = new AspectModelAasGenerator( aspectModel.aspect(),
+      final AspectModelAasGenerator generator = new AspectModelAasGenerator( aspect,
             AasGenerationConfigBuilder.builder().format( AasFileFormat.JSON ).build() );
 
       return new String( generator.getContent() );
@@ -146,8 +160,9 @@ public class GenerateService {
          final OpenApiSchemaGenerationConfig config ) {
       final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
       final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
 
-      final String ymlOutput = new AspectModelOpenApiGenerator( aspectModel.aspect(), config ).generateYaml();
+      final String ymlOutput = new AspectModelOpenApiGenerator( aspect, config ).generateYaml();
 
       if ( ymlOutput.equals( "--- {}\n" ) ) {
          throw new GenerationException( WRONG_RESOURCE_PATH_ID );
@@ -160,8 +175,9 @@ public class GenerateService {
          final OpenApiSchemaGenerationConfig config ) {
       final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
       final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
 
-      final JsonNode json = new AspectModelOpenApiGenerator( aspectModel.aspect(), config ).getContent();
+      final JsonNode json = new AspectModelOpenApiGenerator( aspect, config ).getContent();
 
       final ByteArrayOutputStream out = new ByteArrayOutputStream();
       final ObjectMapper objectMapper = new ObjectMapper();
@@ -182,10 +198,11 @@ public class GenerateService {
          final boolean writeSeparateFiles ) {
       final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
       final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
 
       final AsyncApiSchemaGenerationConfig config = buildAsyncApiSchemaGenerationConfig( applicationId, channelAddress,
             useSemanticVersion, language );
-      final AspectModelAsyncApiGenerator generator = new AspectModelAsyncApiGenerator( aspectModel.aspect(), config );
+      final AspectModelAsyncApiGenerator generator = new AspectModelAsyncApiGenerator( aspect, config );
 
       if ( writeSeparateFiles ) {
          return generateZipFile( generator.generate().toList(), output );

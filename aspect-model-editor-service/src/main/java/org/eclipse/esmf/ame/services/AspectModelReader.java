@@ -88,16 +88,17 @@ public class AspectModelReader {
                .filter( this::hasValidCasing )
                .findFirst()
                .map( this::toResult )
-               .orElseThrow( () -> new FileNotFoundException( ApplicationConstants.ErrorMessages.ASPECT_MODEL_NOT_FOUND ) );
+               .orElseThrow( () -> new FileNotFoundException(
+                     String.format( "Aspect Model '%s' not found in workspace", aspectModelUrn ) ) );
       } catch ( final ModelResolutionException e ) {
          LOG.error( "Model resolution failed for URN: {}", aspectModelUrn, e );
-         throw new FileNotFoundException( e.getMessage(), e );
+         throw new FileNotFoundException( String.format( "Aspect model resolution failed for URN '%s': %s", aspectModelUrn, e.getMessage() ), e );
       } catch ( final UnsupportedVersionException e ) {
          LOG.error( "Unsupported version for URN: {}", aspectModelUrn, e );
-         throw new FileNotFoundException( e.getMessage(), e );
+         throw new InvalidAspectModelException( String.format( "Aspect Model '%s' uses an unsupported SAMM version: %s", aspectModelUrn, e.getMessage() ), e );
       } catch ( final IllegalArgumentException e ) {
          LOG.error( "Illegal argument for URN: {}", aspectModelUrn, e );
-         throw new FileNotFoundException( e.getMessage(), e );
+         throw new FileNotFoundException( String.format( "Invalid path or argument for Aspect Model '%s': %s", aspectModelUrn, e.getMessage() ), e );
       }
    }
 
@@ -129,11 +130,13 @@ public class AspectModelReader {
 
    private void validateBasicStructure( final AspectModel aspectModel ) {
       final List<Violation> violations = aspectModelValidator.validateModel( aspectModel ).violations();
-      final boolean hasInvalidSyntax = violations.stream()
-            .anyMatch( v -> v.code().code() != null && v.code().code().contains( "INVALID_SYNTAX" ) );
+      final List<String> syntaxErrors = violations.stream()
+            .filter( v -> v.code() != null && v.code().code() != null && v.code().code().contains( "INVALID_SYNTAX" ) )
+            .map( Violation::message )
+            .toList();
 
-      if ( hasInvalidSyntax ) {
-         throw new InvalidAspectModelException( "Aspect Model has invalid syntax" );
+      if ( !syntaxErrors.isEmpty() ) {
+         throw new InvalidAspectModelException( "Aspect Model has invalid syntax: " + String.join( "; ", syntaxErrors ) );
       }
    }
 

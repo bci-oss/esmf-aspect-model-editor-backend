@@ -15,7 +15,6 @@ package org.eclipse.esmf.ame.api;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.esmf.ame.constants.ApplicationConstants;
@@ -82,8 +81,9 @@ public class PackageController {
    public HttpResponse<Map<String, List<Version>>> importPackage( @Part( "zipFile" ) final CompletedFileUpload zipFile ) {
       final String extension = FilenameUtils.getExtension( zipFile.getFilename() );
 
-      if ( !Objects.requireNonNull( extension ).equals( "zip" ) ) {
-         throw new FileReadException( "The file you selected is not in ZIP format." );
+      if ( !extension.equalsIgnoreCase( "zip" ) ) {
+         throw new FileReadException(
+               String.format( "The selected file '%s' is not in ZIP format. Please upload a .zip package.", zipFile.getFilename() ) );
       }
 
       return HttpResponse.ok( packageService.importPackage( zipFile ) );

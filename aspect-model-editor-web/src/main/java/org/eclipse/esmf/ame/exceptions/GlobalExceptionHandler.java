@@ -13,9 +13,14 @@
 
 package org.eclipse.esmf.ame.exceptions;
 
+import java.util.NoSuchElementException;
+
 import org.eclipse.esmf.ame.api.model.response.Error;
 import org.eclipse.esmf.ame.api.model.response.ErrorResponse;
 import org.eclipse.esmf.aspectmodel.AspectLoadingException;
+import org.eclipse.esmf.aspectmodel.UnsupportedVersionException;
+import org.eclipse.esmf.aspectmodel.resolver.exceptions.ModelResolutionException;
+import org.eclipse.esmf.aspectmodel.resolver.exceptions.ParserException;
 
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -29,7 +34,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Global exception handler for all runtime exceptions in the Aspect Model Editor.
- * Converts exceptions into appropriate HTTP responses with proper status codes.
+ * Converts exceptions into appropriate HTTP responses with proper status codes and intuitive error messages.
  */
 @Singleton
 @Produces( "application/json" )
@@ -40,11 +45,12 @@ public class GlobalExceptionHandler implements ExceptionHandler<RuntimeException
    @Override
    public HttpResponse<?> handle( final @NonNull HttpRequest request, final @NonNull RuntimeException exception ) {
       final HttpStatus status = determineHttpStatus( exception );
-      logException( request, exception, status );
+      final String errorMessage = extractErrorMessage( exception );
+      logException( request, exception, status, errorMessage );
 
       final ErrorResponse errorResponse = new ErrorResponse(
             new Error(
-                  exception.getMessage(),
+                  errorMessage,
                   request.getUri().toString(),
                   status.getCode() )
       );
@@ -53,9 +59,41 @@ public class GlobalExceptionHandler implements ExceptionHandler<RuntimeException
    }
 
    /**
+    * Extracts an intuitive, user-friendly error message from the given exception.
+    *
+    * @param exception the exception to extract the message from
+    * @return the extracted error message
+    */
+   private String extractErrorMessage( final RuntimeException exception ) {
+      if ( exception instanceof AspectLoadingException ) {
+         final Throwable cause = exception.getCause();
+         if ( cause != null && cause.getMessage() != null && !cause.getMessage().isBlank() ) {
+            return "Failed to load Aspect Model: " + cause.getMessage();
+         }
+      }
+
+      if ( exception instanceof NoSuchElementException ) {
+         final String msg = exception.getMessage();
+         if ( msg == null || msg.isBlank() || "No value present".equalsIgnoreCase( msg ) ) {
+            return "The requested Aspect Model element was not found.";
+         }
+      }
+
+      final String message = exception.getMessage();
+      if ( message != null && !message.isBlank() ) {
+         return message;
+      }
+
+      final Throwable cause = exception.getCause();
+      if ( cause != null && cause.getMessage() != null && !cause.getMessage().isBlank() ) {
+         return cause.getMessage();
+      }
+
+      return "An unexpected error occurred: " + exception.getClass().getSimpleName();
+   }
+
+   /**
     * Determines the appropriate HTTP status code for the given exception.
-    * Uses the built-in status code from AspectModelEditorException, or defaults
-    * to CONFLICT for AspectLoadingException and INTERNAL_SERVER_ERROR for others.
     *
     * @param exception the exception to determine status for
     * @return the appropriate HTTP status
@@ -63,8 +101,18 @@ public class GlobalExceptionHandler implements ExceptionHandler<RuntimeException
    private HttpStatus determineHttpStatus( final RuntimeException exception ) {
       if ( exception instanceof final AspectModelEditorException ameException ) {
          return HttpStatus.valueOf( ameException.getHttpStatusCode() );
-      } else if ( exception instanceof AspectLoadingException ) {
+      } else if ( exception instanceof AspectLoadingException || exception instanceof ModelResolutionException ) {
          return HttpStatus.CONFLICT;
+      } else if ( exception instanceof UnsupportedVersionException ) {
+         return HttpStatus.CONFLICT;
+      } else if ( exception instanceof ParserException ) {
+         return HttpStatus.BAD_REQUEST;
+      } else if ( exception instanceof IllegalArgumentException ) {
+         return HttpStatus.BAD_REQUEST;
+      } else if ( exception instanceof NoSuchElementException ) {
+         return HttpStatus.NOT_FOUND;
+      } else if ( exception instanceof IllegalStateException ) {
+         return HttpStatus.BAD_REQUEST;
       } else {
          return HttpStatus.INTERNAL_SERVER_ERROR;
       }
@@ -78,21 +126,22 @@ public class GlobalExceptionHandler implements ExceptionHandler<RuntimeException
     * @param request the HTTP request that caused the exception
     * @param exception the exception that occurred
     * @param status the HTTP status being returned
+    * @param errorMessage the resolved error message
     */
-   private void logException( final HttpRequest request, final Throwable exception, final HttpStatus status ) {
+   private void logException( final HttpRequest request, final Throwable exception, final HttpStatus status, final String errorMessage ) {
       if ( status.getCode() >= 500 ) {
          LOG.error( "Server error {} ({}) for request {}: {}",
                exception.getClass().getSimpleName(),
                status.getCode(),
                request.getUri(),
-               exception.getMessage(),
+               errorMessage,
                exception );
       } else {
          LOG.info( "Client error {} ({}) for request {}: {}",
                exception.getClass().getSimpleName(),
                status.getCode(),
                request.getUri(),
-               exception.getMessage() );
+               errorMessage );
       }
    }
 }
