@@ -61,7 +61,7 @@ public final class ApplicationConstants {
    public static final class ErrorMessages {
       public static final String ASPECT_MODEL_NOT_FOUND = "Aspect Model not found";
       public static final String SPECIFY_ASPECT_MODEL_URN = "Please specify an aspect model urn";
-      public static final String INVALID_URI_FORMAT = "Invalid Aspect Model File URI Format";
+      public static final String INVALID_URI_FORMAT = "Please define a file URI in the request header";
       public static final String SAMM_STRUCTURE_INFO = "Please check whether the SAMM structure has been followed in the workspace: "
             + "Namespace/Version/Aspect model.";
 

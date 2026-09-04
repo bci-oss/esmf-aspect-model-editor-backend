@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.NoSuchElementException;
 
 import org.eclipse.esmf.ame.api.model.response.ErrorResponse;
@@ -157,6 +158,78 @@ class GlobalExceptionHandlerTest {
       final ErrorResponse body = (ErrorResponse) response.body();
       assertNotNull( body );
       assertEquals( "Outdated BAMM definition", body.error().message() );
+   }
+
+   @Test
+   void testHandleFileHandlingException() {
+      final FileHandlingException ex = new FileHandlingException( "Failed to process file on disk" );
+      final HttpResponse<?> response = handler.handle( request, ex );
+
+      assertEquals( HttpStatus.INTERNAL_SERVER_ERROR, response.getStatus() );
+      final ErrorResponse body = (ErrorResponse) response.body();
+      assertNotNull( body );
+      assertEquals( "Failed to process file on disk", body.error().message() );
+      assertEquals( 500, body.error().code() );
+   }
+
+   @Test
+   void testHandleFileReadException() {
+      final FileReadException ex = new FileReadException( "Failed to read file from upload" );
+      final HttpResponse<?> response = handler.handle( request, ex );
+
+      assertEquals( HttpStatus.CONFLICT, response.getStatus() );
+      final ErrorResponse body = (ErrorResponse) response.body();
+      assertNotNull( body );
+      assertEquals( "Failed to read file from upload", body.error().message() );
+      assertEquals( 409, body.error().code() );
+   }
+
+   @Test
+   void testHandleCreateFileException() {
+      final CreateFileException ex = new CreateFileException( "Cannot create duplicate model" );
+      final HttpResponse<?> response = handler.handle( request, ex );
+
+      assertEquals( HttpStatus.CONFLICT, response.getStatus() );
+      final ErrorResponse body = (ErrorResponse) response.body();
+      assertNotNull( body );
+      assertEquals( "Cannot create duplicate model", body.error().message() );
+      assertEquals( 409, body.error().code() );
+   }
+
+   @Test
+   void testHandleUrnNotFoundException() {
+      final UrnNotFoundException ex = new UrnNotFoundException( "URN not found", null );
+      final HttpResponse<?> response = handler.handle( request, ex );
+
+      assertEquals( HttpStatus.NOT_FOUND, response.getStatus() );
+      final ErrorResponse body = (ErrorResponse) response.body();
+      assertNotNull( body );
+      assertEquals( "URN not found", body.error().message() );
+      assertEquals( 404, body.error().code() );
+   }
+
+   @Test
+   void testHandleURISyntaxException() {
+      final URISyntaxException ex = new URISyntaxException( "ht tp://bad uri", "Illegal character" );
+      final HttpResponse<?> response = handler.handle( request, ex );
+
+      assertEquals( HttpStatus.UNPROCESSABLE_ENTITY, response.getStatus() );
+      final ErrorResponse body = (ErrorResponse) response.body();
+      assertNotNull( body );
+      assertEquals( 422, body.error().code() );
+      assertTrue( body.error().message().contains( "Invalid URI format" ) );
+   }
+
+   @Test
+   void testHandleGenericException() {
+      final NullPointerException ex = new NullPointerException();
+      final HttpResponse<?> response = handler.handle( request, ex );
+
+      assertEquals( HttpStatus.INTERNAL_SERVER_ERROR, response.getStatus() );
+      final ErrorResponse body = (ErrorResponse) response.body();
+      assertNotNull( body );
+      assertEquals( 500, body.error().code() );
+      assertTrue( body.error().message().contains( "NullPointerException" ) );
    }
 }
 

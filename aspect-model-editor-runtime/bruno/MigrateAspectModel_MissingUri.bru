@@ -1,11 +1,11 @@
 meta {
-  name: ValidateModel_MissingUri
+  name: MigrateAspectModel_MissingUri
   type: http
-  seq: 52
+  seq: 58
 }
 
 post {
-  url: http://localhost:{{port}}/ame/api/models/validate
+  url: http://localhost:{{port}}/ame/api/models/migrate
   body: multipartForm
   auth: none
 }
@@ -19,8 +19,9 @@ tests {
     expect(res.getStatus()).to.equal(422);
   });
   
-  test("Error message indicates missing URI format", function() {
+  test("Error message indicates URI is not defined", function() {
     const error = res.getBody().error;
+    expect(error.code).to.equal(422);
     expect(error.message).to.include("Please define a file URI in the request header");
   });
 }

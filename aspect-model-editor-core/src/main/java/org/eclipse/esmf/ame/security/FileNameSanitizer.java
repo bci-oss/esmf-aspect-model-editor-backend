@@ -15,8 +15,6 @@ package org.eclipse.esmf.ame.security;
 
 import java.io.File;
 
-import org.eclipse.esmf.ame.exceptions.FileHandlingException;
-
 import jakarta.inject.Singleton;
 
 /**
@@ -41,7 +39,7 @@ public class FileNameSanitizer {
     */
    public String sanitize( final String fileInformation ) {
       if ( fileInformation == null || fileInformation.isBlank() ) {
-         throw new FileHandlingException( "File information must not be null or empty" );
+         throw new IllegalArgumentException( "File information must not be null or empty" );
       }
 
       final String trimmed = fileInformation.trim();
@@ -49,7 +47,7 @@ public class FileNameSanitizer {
       if ( trimmed.contains( File.separator ) || trimmed.contains( "/" )
             || trimmed.contains( "\\" ) || trimmed.contains( ".." )
             || trimmed.contains( "\0" ) || trimmed.contains( "%" ) ) {
-         throw new FileHandlingException(
+         throw new IllegalArgumentException(
                "Invalid file information: The provided string must not contain directory separators, "
                      + "relative path components, or encoded characters." );
       }

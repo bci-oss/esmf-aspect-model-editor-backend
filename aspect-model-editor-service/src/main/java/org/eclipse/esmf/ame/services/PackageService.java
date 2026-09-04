@@ -30,7 +30,8 @@ import java.util.zip.ZipOutputStream;
 
 import org.eclipse.esmf.ame.constants.ApplicationConstants;
 import org.eclipse.esmf.ame.exceptions.CreateFileException;
-import org.eclipse.esmf.ame.exceptions.FileHandlingException;
+import org.eclipse.esmf.ame.exceptions.FileReadException;
+import org.eclipse.esmf.ame.exceptions.InvalidAspectModelException;
 import org.eclipse.esmf.ame.services.models.Version;
 import org.eclipse.esmf.ame.services.utils.ModelGroupingUtils;
 import org.eclipse.esmf.aspectmodel.AspectModelFile;
@@ -98,9 +99,9 @@ public class PackageService {
          return new ModelGroupingUtils( aspectModelLoader, aspectModelValidator ).groupModelsByNamespaceAndVersion( list );
       } catch ( final ValueParsingException | IOException e ) {
          if ( e instanceof ValueParsingException ) {
-            throw new FileHandlingException( "The structure inside the " + ApplicationConstants.FileExtensions.ZIP + " file does not match the expected format." );
+            throw new InvalidAspectModelException( "The structure inside the " + ApplicationConstants.FileExtensions.ZIP + " file does not match the expected format.", e );
          } else {
-            throw new FileHandlingException( "Could not read from input", e );
+            throw new FileReadException( "Could not read from input: " + e.getMessage(), e );
          }
       }
    }
@@ -111,7 +112,7 @@ public class PackageService {
          // This indicates a malformed file in the package
          final String fileName = file.filename().orElse( "unknown" );
          LOG.warn( "Source model is empty for file: {} with namespace: {}", fileName, file.namespaceUrn() );
-         throw new FileHandlingException( String.format(
+         throw new InvalidAspectModelException( String.format(
                "Source model is empty for file '%s'. The package may be malformed or corrupted.", fileName ) );
       }
 

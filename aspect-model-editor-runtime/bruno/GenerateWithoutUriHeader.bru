@@ -21,6 +21,6 @@ tests {
   
   test("Error message indicates invalid or missing URI format", function() {
     const error = res.getBody().error;
-    expect(error.message).to.include("Invalid Aspect Model File URI Format");
+    expect(error.message).to.include("Please define a file URI in the request header");
   });
 }

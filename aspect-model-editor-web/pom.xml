@@ -46,6 +46,14 @@
          <groupId>org.eclipse.esmf</groupId>
          <artifactId>esmf-aspect-model-document-generators</artifactId>
       </dependency>
+      <dependency>
+         <groupId>org.eclipse.esmf</groupId>
+         <artifactId>esmf-aspect-model-validator</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>org.eclipse.esmf</groupId>
+         <artifactId>esmf-aspect-model-aas-generator</artifactId>
+      </dependency>
 
       <!-- Third party dependencies -->
       <dependency>
