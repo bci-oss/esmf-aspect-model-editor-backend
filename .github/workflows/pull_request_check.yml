@@ -34,7 +34,7 @@ jobs:
           disk-root: "C:"
 
       - name: Setup JDK
-        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
         with:
           java-version: '25.0.3'
           distribution: 'temurin'
@@ -84,19 +84,17 @@ jobs:
           tar -xvf jre.tar.gz -C $bundle
           cp aspect-model-editor-runtime/target/aspect-model-editor-runtime-DEV-SNAPSHOT.jar ./${bundle}/
           
-          cat <<EOF > ./${bundle}/run.sh
-          #!/usr/bin/env bash
-
-          HERE=\${BASH_SOURCE%/*}
-
-          "\$HERE/jdk-25.0.3+9-jre/bin/java" -jar "\$HERE/aspect-model-editor-runtime-DEV-SNAPSHOT.jar" "\$@"
-          EOF
+          cp scripts/linux/run.sh ./${bundle}/
           chmod +x ./${bundle}/run.sh
 
-          curl -Lo warp-packer https://github.com/dgiagio/warp/releases/download/v0.3.0/linux-x64.warp-packer
+          curl -Lo warp-packer https://github.com/kirbylink/warp/releases/download/v1.3.0/linux-x64.warp-packer
+          if [ "$(sha256sum warp-packer | cut -d' ' -f1)" != "add6f937db8b9207d1bb81a900ef609f41875f07c6c8b2d596bfc134c8f285ff" ]; then
+            echo "Warp packer checksum does not match"
+            exit 1
+          fi
           chmod +x warp-packer
-          
-          ./warp-packer --arch linux-x64 --input_dir ${bundle} --exec run.sh --output ame-backend-DEV-SNAPSHOT-linux
+
+          ./warp-packer pack --arch linux-x64 --input-dir ${bundle} --exec run.sh --output ame-backend-DEV-SNAPSHOT-linux
           chmod +x ame-backend-DEV-SNAPSHOT-linux
           
           cp ame-backend-DEV-SNAPSHOT-linux aspect-model-editor-runtime/target/
@@ -105,19 +103,75 @@ jobs:
       - name: Build warp packer (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          $bundle = "aspect-model-editor-bundle-DEV-SNAPSHOT-$([int][double]::Parse((Get-Date -UFormat %s)))"
-          mkdir $bundle
+          bundle="aspect-model-editor-bundle-DEV-SNAPSHOT-$(date +%s)"
+          mkdir "$bundle"
+          mkdir "$bundle/app"
           curl -Lo jre.zip https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.3%2B9/OpenJDK25U-jre_x64_windows_hotspot_25.0.3_9.zip
-          tar -xf jre.zip -C .\$bundle
-          Copy-Item aspect-model-editor-runtime/target/aspect-model-editor-runtime-DEV-SNAPSHOT.jar .\$bundle\
+          unzip -q jre.zip -d "./$bundle"
+          mv "./$bundle/jdk-25.0.3+9-jre" "./$bundle/jre"
+          rm jre.zip
+          
+          cp "./$bundle/jre/bin/jli.dll" "./$bundle/app/"
+          cp "./$bundle/jre/bin/jimage.dll" "./$bundle/app/"
+          cp "./$bundle/jre/bin/server/jvm.dll" "./$bundle/app/"
 
-          Set-Content -Path .\$bundle\run.bat -Value "@echo off`n%~dp0jdk-25.0.3+9-jre\bin\java -jar %~dp0aspect-model-editor-runtime-DEV-SNAPSHOT.jar %*"
+          zstd_jar=$(mvn dependency:build-classpath -DincludeArtifactIds=zstd-jni | grep -E '\.jar$' | tr ';' '\n' | tr '\\' '/' | grep 'zstd-jni' | grep '\.jar$' | head -n 1)
+          jna_jar=$(mvn dependency:build-classpath -DincludeArtifactIds=jna | grep -E '\.jar$' | tr ';' '\n' | tr '\\' '/' | grep 'jna' | grep '\.jar$' | head -n 1)
+          api_jar=$(mvn dependency:build-classpath -DincludeArtifactIds=truffle-api | grep -E '\.jar$' | tr ';' '\n' | tr '\\' '/' | grep 'truffle-api' | grep '\.jar$' | head -n 1)
+          
+          if [ -n "$zstd_jar" ] && [ -f "$zstd_jar" ]; then
+            cp "$zstd_jar" "./$bundle/app/"
+          
+            jar_basename=$(basename "$zstd_jar")
+            version="${jar_basename#zstd-jni-}"
+            version="${version%.jar}"
+          
+            unzip -p "$zstd_jar" "win/amd64/libzstd-jni-${version}.dll" > "./$bundle/app/libzstd-jni-${version}.dll"
+            cp "./$bundle/app/libzstd-jni-${version}.dll" "./$bundle/app/zstd-jni-${version}.dll"
+          
+            if [ -s "./$bundle/app/zstd-jni-${version}.dll" ]; then
+              echo "Success extraction JNI"
+             fi
+          fi
 
-          curl -Lo warp-packer.exe https://github.com/dgiagio/warp/releases/download/v0.3.0/windows-x64.warp-packer.exe
-          .\warp-packer.exe --arch windows-x64 --input_dir $bundle --exec run.bat --output ame-backend-DEV-SNAPSHOT-win.exe
+          if [ -n "$jna_jar" ] && [ -f "$jna_jar" ]; then
+            cp "$jna_jar" "./$bundle/app/"
 
-          Copy-Item ame-backend-DEV-SNAPSHOT-win.exe aspect-model-editor-runtime/target/
-        shell: pwsh
+            unzip -p "$jna_jar" "com/sun/jna/win32-x86-64/jnidispatch.dll" > "./$bundle/app/jnidispatch.dll"
+
+            if [ -s "./$bundle/app/jnidispatch.dll" ]; then
+              echo "Success extraction JNA DLL"
+            fi
+          fi
+          
+          if [ -n "$api_jar" ] && [ -f "$api_jar" ]; then
+            mkdir -p native-libs
+            unzip -j "$api_jar" "META-INF/resources/engine/libtruffleattach/windows/amd64/bin/truffleattach.dll" -d native-libs
+
+            if [ -f "native-libs/truffleattach.dll" ]; then
+              cp "native-libs/truffleattach.dll" "./$bundle/app/truffleattach.dll"
+              echo "Success extraction truffleattach.dll"
+            fi
+          fi
+          
+          echo "Bundle app folder:"
+          ls -l "./$bundle/app/"
+
+          mv aspect-model-editor-runtime/target/aspect-model-editor-runtime-DEV-SNAPSHOT.jar "./$bundle/app"
+          
+          GOOS=windows GOARCH=amd64 go build -ldflags -H=windowsgui -o "./$bundle/run.exe" scripts/windows/run.go
+
+          curl -Lo warp-packer.exe https://github.com/kirbylink/warp/releases/download/v1.3.0/windows-x64.warp-packer.exe
+          if [ "$(sha256sum warp-packer.exe | cut -d' ' -f1)" != "483726e0eb10a43167c03c8e4f27a2901741affd245e5ec8ed45509f9dcd7a8a" ]; then
+            echo "Warp packer checksum does not match"
+            exit 1
+          fi
+          
+          ./warp-packer.exe pack --arch windows-x64 --input-dir "$bundle" --exec run.exe --output ame-backend-DEV-SNAPSHOT-win.exe
+
+          mv ame-backend-DEV-SNAPSHOT-win.exe aspect-model-editor-runtime/target/
+          rm -rf "$bundle"
+        shell: bash
 
       - name: Build warp packer (Mac)
         if: matrix.os == 'macos-15-intel'
@@ -128,20 +182,18 @@ jobs:
           tar -xvf jre.tar.gz
           cp -r ./jdk-25.0.3+9-jre ./${bundle}/jre
           cp aspect-model-editor-runtime/target/aspect-model-editor-runtime-DEV-SNAPSHOT.jar ./${bundle}/
-
-          cat <<EOF > ./${bundle}/run.sh
-          #!/usr/bin/env bash
-
-          HERE=\${BASH_SOURCE%/*}
-
-          "\$HERE/jre/Contents/Home/bin/java" -jar "\$HERE/aspect-model-editor-runtime-DEV-SNAPSHOT.jar" "\$@"
-          EOF
+          cp scripts/macos/run.sh ./${bundle}/
           chmod +x ./${bundle}/run.sh
 
-          curl -Lo warp-packer https://github.com/dgiagio/warp/releases/download/v0.3.0/macos-x64.warp-packer
+          curl -Lo warp-packer https://github.com/kirbylink/warp/releases/download/v1.3.0/macos-x64.warp-packer
+          if [ "$(shasum -a 256 warp-packer | cut -d' ' -f1)" != "311bd238d087ea92f486d3d754a0f11826d9bd49d6f8ae849e5d6f6089a2e9c9" ]; then
+            echo "Warp packer checksum does not match"
+            exit 1
+          fi
           chmod +x warp-packer
-          
-          ./warp-packer --arch macos-x64 --input_dir ${bundle} --exec run.sh --output ame-backend-DEV-SNAPSHOT-mac
+          xattr -d com.apple.quarantine warp-packer || true
+
+          ./warp-packer pack --arch macos-x64 --input-dir ${bundle} --exec run.sh --output ame-backend-DEV-SNAPSHOT-mac
           chmod +x ame-backend-DEV-SNAPSHOT-mac
 
           cp ame-backend-DEV-SNAPSHOT-mac aspect-model-editor-runtime/target/
@@ -149,19 +201,19 @@ jobs:
 
       - name: Performing integration test for Mac
         if: matrix.os == 'macos-15-intel'
-        run: mvn install -DskipTests -P dependencies-for-integration-tests,start-mac-image-for-integration-tests,run-bruno-integration-tests -Dos.platform=mac
+        run: mvn verify -DskipTests -P dependencies-for-integration-tests,start-mac-image-for-integration-tests,run-bruno-integration-tests -Dos.platform=mac -Dmaven.shade.skip=true -Dmaven.jar.skip=true
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Performing integration test for Linux
         if: matrix.os == 'ubuntu-latest'
-        run: mvn install -DskipTests -P dependencies-for-integration-tests,start-linux-image-for-integration-tests,run-bruno-integration-tests -Dos.platform=linux
+        run: mvn verify -DskipTests -P dependencies-for-integration-tests,start-linux-image-for-integration-tests,run-bruno-integration-tests -Dos.platform=linux -Dmaven.shade.skip=true -Dmaven.jar.skip=true
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Performing integration test for Windows
         if: matrix.os == 'windows-latest'
-        run: mvn install -DskipTests -P dependencies-for-integration-tests,start-windows-image-for-integration-tests,run-bruno-integration-tests -D os.platform=win
+        run: mvn verify -DskipTests -P dependencies-for-integration-tests,start-windows-image-for-integration-tests,run-bruno-integration-tests -D os.platform=win -D maven.shade.skip=true -D maven.jar.skip=true
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
