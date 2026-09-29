@@ -1,0 +1,30 @@
+meta {
+  name: AddWorkspace
+  type: http
+  seq: 66
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/workspaces
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "path": "/tmp/test-workspace",
+    "setActive": false
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response contains added workspace", function() {
+    const data = res.getBody();
+    expect(data.workspaces).to.be.an("array");
+    expect(data.workspaces).to.include("/tmp/test-workspace");
+  });
+}

@@ -34,6 +34,7 @@ import org.eclipse.esmf.ame.exceptions.FileReadException;
 import org.eclipse.esmf.ame.exceptions.InvalidAspectModelException;
 import org.eclipse.esmf.ame.services.models.Version;
 import org.eclipse.esmf.ame.services.utils.ModelGroupingUtils;
+import org.eclipse.esmf.ame.services.workspace.WorkspaceConfigService;
 import org.eclipse.esmf.aspectmodel.AspectModelFile;
 import org.eclipse.esmf.aspectmodel.ValueParsingException;
 import org.eclipse.esmf.aspectmodel.edit.AspectChangeManager;
@@ -52,6 +53,7 @@ import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 import org.eclipse.esmf.aspectmodel.validation.services.AspectModelValidator;
 import org.eclipse.esmf.metamodel.AspectModel;
 
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.multipart.CompletedFileUpload;
 import jakarta.inject.Singleton;
 import org.apache.commons.io.IOUtils;
@@ -69,12 +71,24 @@ public class PackageService {
    private final AspectModelLoader aspectModelLoader;
    private final AspectModelValidator aspectModelValidator;
    private final Path modelPath;
+   private final @Nullable WorkspaceConfigService workspaceConfigService;
 
    public PackageService( final AspectModelLoader aspectModelLoader, final Path modelPath,
-         final AspectModelValidator aspectModelValidator ) {
+         final AspectModelValidator aspectModelValidator,
+         final @Nullable WorkspaceConfigService workspaceConfigService ) {
       this.aspectModelLoader = aspectModelLoader;
       this.modelPath = modelPath;
       this.aspectModelValidator = aspectModelValidator;
+      this.workspaceConfigService = workspaceConfigService;
+   }
+
+   public PackageService( final AspectModelLoader aspectModelLoader, final Path modelPath,
+         final AspectModelValidator aspectModelValidator ) {
+      this( aspectModelLoader, modelPath, aspectModelValidator, null );
+   }
+
+   private Path getActiveModelPath() {
+      return workspaceConfigService != null ? workspaceConfigService.getActiveWorkspacePath() : modelPath;
    }
 
    public byte[] exportPackage( final String aspectModelUrn ) {
@@ -84,7 +98,7 @@ public class PackageService {
 
    public Map<String, List<Version>> importPackage( final CompletedFileUpload zipFile ) {
       try {
-         final ModelsRoot modelsRoot = new StructuredModelsRoot( modelPath );
+         final ModelsRoot modelsRoot = new StructuredModelsRoot( getActiveModelPath() );
          final byte[] zipContent = IOUtils.toByteArray( zipFile.getInputStream() );
          final NamespacePackage namespacePackage = new NamespacePackage( zipContent, null );
 
@@ -142,15 +156,16 @@ public class PackageService {
 
    public void backupWorkspace() {
       try {
+         final Path targetModelPath = getActiveModelPath();
          final String timestamp = LocalDateTime.now().format( BACKUP_TIMESTAMP_FORMAT );
-         final String zipFileName = modelPath.resolve( "backup-" + timestamp + ApplicationConstants.FileExtensions.ZIP ).toString();
+         final String zipFileName = targetModelPath.resolve( "backup-" + timestamp + ApplicationConstants.FileExtensions.ZIP ).toString();
 
          try ( final ZipOutputStream zos = new ZipOutputStream( new FileOutputStream( zipFileName ) );
-               final Stream<Path> paths = Files.walk( modelPath ) ) {
+               final Stream<Path> paths = Files.walk( targetModelPath ) ) {
 
             paths.filter( Files::isRegularFile ).filter( path -> path.toString().endsWith( ApplicationConstants.FileExtensions.TTL ) ).forEach( filePath -> {
                try {
-                  final ZipEntry zipEntry = new ZipEntry( modelPath.relativize( filePath ).toString() );
+                  final ZipEntry zipEntry = new ZipEntry( targetModelPath.relativize( filePath ).toString() );
                   zos.putNextEntry( zipEntry );
                   Files.copy( filePath, zos );
                   zos.closeEntry();

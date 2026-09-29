@@ -15,6 +15,8 @@ package org.eclipse.esmf.ame.config;
 
 import java.nio.file.Path;
 
+import org.eclipse.esmf.ame.services.workspace.DynamicResolutionStrategy;
+import org.eclipse.esmf.ame.services.workspace.WorkspaceConfigService;
 import org.eclipse.esmf.aspectmodel.loader.AspectModelLoader;
 import org.eclipse.esmf.aspectmodel.resolver.FileSystemStrategy;
 import org.eclipse.esmf.aspectmodel.validation.services.AspectModelValidator;
@@ -62,23 +64,27 @@ public class ApplicationConfig {
    }
 
    /**
-    * Determines and returns the path for models based on the environment profile.
+    * Determines and returns the path for models based on the active workspace.
     *
-    * @return the absolute path to the models.
+    * @param workspaceConfigService the workspace configuration service
+    * @return the absolute path to the active models directory.
     */
    @Bean
    @Singleton
-   public Path modelPath() {
-      return ApplicationSettings.getMetaModelStoragePath();
+   public Path modelPath( final WorkspaceConfigService workspaceConfigService ) {
+      return workspaceConfigService.getActiveWorkspacePath();
    }
 
    /**
-    * Creates a bean of {@link AspectModelLoader} using a {@link FileSystemStrategy} based on the model path.
+    * Creates a bean of {@link AspectModelLoader} using {@link DynamicResolutionStrategy}
+    * to resolve models across all configured workspaces.
     *
+    * @param dynamicResolutionStrategy the dynamic resolution strategy
     * @return a new instance of {@link AspectModelLoader}.
     */
    @Bean
-   public AspectModelLoader aspectModelLoader() {
-      return new AspectModelLoader( new FileSystemStrategy( modelPath() ) );
+   @Singleton
+   public AspectModelLoader aspectModelLoader( final DynamicResolutionStrategy dynamicResolutionStrategy ) {
+      return new AspectModelLoader( dynamicResolutionStrategy );
    }
 }

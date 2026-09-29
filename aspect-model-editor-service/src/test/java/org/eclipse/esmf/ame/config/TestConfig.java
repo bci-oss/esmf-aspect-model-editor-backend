@@ -13,14 +13,18 @@
 
 package org.eclipse.esmf.ame.config;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
+import org.eclipse.esmf.ame.services.workspace.WorkspaceConfigService;
 import org.eclipse.esmf.aspectmodel.loader.AspectModelLoader;
 import org.eclipse.esmf.aspectmodel.resolver.FileSystemStrategy;
 import org.eclipse.esmf.aspectmodel.validation.services.AspectModelValidator;
 
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.json.JsonMapper;
 import jakarta.inject.Singleton;
 
 @Factory
@@ -42,5 +46,14 @@ public class TestConfig {
    @Singleton
    public Path modelPath() {
       return Path.of( "src", "test", "resources", "services" ).toAbsolutePath();
+   }
+
+   @Bean
+   @Singleton
+   @io.micronaut.context.annotation.Replaces( WorkspaceConfigService.class )
+   public WorkspaceConfigService workspaceConfigService() throws IOException {
+      final Path tempConfig = Files.createTempFile( "test-workspaces-", ".json" );
+      tempConfig.toFile().deleteOnExit();
+      return new WorkspaceConfigService( tempConfig, modelPath(), JsonMapper.createDefault() );
    }
 }

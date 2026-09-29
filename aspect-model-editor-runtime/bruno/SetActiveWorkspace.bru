@@ -1,0 +1,28 @@
+meta {
+  name: SetActiveWorkspace
+  type: http
+  seq: 67
+}
+
+put {
+  url: http://localhost:{{port}}/ame/api/workspaces/active
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "path": "/tmp/test-workspace"
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response activeWorkspace updated", function() {
+    const data = res.getBody();
+    expect(data.activeWorkspace).to.equal("/tmp/test-workspace");
+  });
+}

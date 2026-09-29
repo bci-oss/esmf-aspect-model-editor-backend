@@ -1,0 +1,23 @@
+meta {
+  name: DeleteWorkspace
+  type: http
+  seq: 68
+}
+
+delete {
+  url: http://localhost:{{port}}/ame/api/workspaces?path=/tmp/test-workspace
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response workspace removed", function() {
+    const data = res.getBody();
+    expect(data.workspaces).to.be.an("array");
+    expect(data.workspaces).to.not.include("/tmp/test-workspace");
+  });
+}

@@ -37,6 +37,8 @@ public class ApplicationSettings {
    private static final String USER_HOME = System.getProperty( "user.home" );
    private static final String ASPECT_MODEL_PATH = USER_HOME + File.separator + ApplicationConstants.Directories.ASPECT_MODEL_EDITOR;
    private static final String META_MODEL_PATH = ASPECT_MODEL_PATH + File.separator + ApplicationConstants.Directories.MODELS;
+   private static final String WORKSPACE_CONFIG_FILE = "workspaces.json";
+   private static final String WORKSPACE_CONFIG_PATH = ASPECT_MODEL_PATH + File.separator + WORKSPACE_CONFIG_FILE;
 
    private ApplicationSettings() {
    }
@@ -57,6 +59,25 @@ public class ApplicationSettings {
          throw new CreateFileException( String.format(
                "Unable to create the meta model storage directory at: %s. Please check your permissions or the validity of the path.",
                META_MODEL_PATH ), e );
+      }
+   }
+
+   /**
+    * Gets the file path for the workspace configuration (workspaces.json).
+    * Creates the parent directory structure if it doesn't exist.
+    *
+    * @return the path to the workspaces.json file
+    * @throws CreateFileException if the parent directory cannot be created
+    */
+   public static Path getWorkspaceConfigFilePath() {
+      try {
+         final Path configDir = Path.of( ASPECT_MODEL_PATH );
+         FileUtils.forceMkdir( configDir.toFile() );
+         return Path.of( WORKSPACE_CONFIG_PATH );
+      } catch ( final IOException e ) {
+         throw new CreateFileException( String.format(
+               "Unable to create the workspace configuration directory at: %s.",
+               ASPECT_MODEL_PATH ), e );
       }
    }
 }

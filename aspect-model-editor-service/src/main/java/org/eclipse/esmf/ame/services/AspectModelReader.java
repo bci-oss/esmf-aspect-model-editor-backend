@@ -25,6 +25,7 @@ import org.eclipse.esmf.ame.exceptions.InvalidAspectModelException;
 import org.eclipse.esmf.ame.repository.AspectModelRepository;
 import org.eclipse.esmf.ame.services.file.FilePathResolver;
 import org.eclipse.esmf.ame.services.models.AspectModelResult;
+import org.eclipse.esmf.ame.services.workspace.WorkspaceConfigService;
 import org.eclipse.esmf.aspectmodel.AspectModelFile;
 import org.eclipse.esmf.aspectmodel.UnsupportedVersionException;
 import org.eclipse.esmf.aspectmodel.Violation;
@@ -37,8 +38,8 @@ import org.eclipse.esmf.metamodel.AspectModel;
 import org.eclipse.esmf.metamodel.impl.DefaultScalar;
 import org.eclipse.esmf.metamodel.impl.DefaultScalarValue;
 
+import io.micronaut.core.annotation.Nullable;
 import jakarta.inject.Singleton;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +56,22 @@ public class AspectModelReader {
    private final AspectModelValidator aspectModelValidator;
    private final FilePathResolver filePathResolver;
    private final Path modelPath;
+   private final @Nullable WorkspaceConfigService workspaceConfigService;
+
+   public AspectModelReader(
+         final AspectModelLoader aspectModelLoader,
+         final AspectModelRepository aspectModelRepository,
+         final AspectModelValidator aspectModelValidator,
+         final FilePathResolver filePathResolver,
+         final Path modelPath,
+         final @Nullable WorkspaceConfigService workspaceConfigService ) {
+      this.aspectModelLoader = aspectModelLoader;
+      this.aspectModelRepository = aspectModelRepository;
+      this.aspectModelValidator = aspectModelValidator;
+      this.filePathResolver = filePathResolver;
+      this.modelPath = modelPath;
+      this.workspaceConfigService = workspaceConfigService;
+   }
 
    public AspectModelReader(
          final AspectModelLoader aspectModelLoader,
@@ -62,11 +79,7 @@ public class AspectModelReader {
          final AspectModelValidator aspectModelValidator,
          final FilePathResolver filePathResolver,
          final Path modelPath ) {
-      this.aspectModelLoader = aspectModelLoader;
-      this.aspectModelRepository = aspectModelRepository;
-      this.aspectModelValidator = aspectModelValidator;
-      this.filePathResolver = filePathResolver;
-      this.modelPath = modelPath;
+      this( aspectModelLoader, aspectModelRepository, aspectModelValidator, filePathResolver, modelPath, null );
    }
 
    /**
@@ -122,7 +135,10 @@ public class AspectModelReader {
 
    private AspectModel loadModel( final AspectModelUrn aspectModelUrn, final @Nullable String filePath ) {
       if ( filePath != null && !filePath.isEmpty() ) {
-         final Path resolvedPath = filePathResolver.resolveFromRelativePath( modelPath, filePath );
+         final List<Path> paths = workspaceConfigService != null
+               ? workspaceConfigService.getWorkspacePaths()
+               : List.of( modelPath );
+         final Path resolvedPath = filePathResolver.resolveFromRelativePath( paths, filePath );
          return aspectModelLoader.load( resolvedPath.toFile() );
       }
       return aspectModelRepository.loadByUrn( aspectModelUrn ).get();

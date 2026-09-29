@@ -35,6 +35,7 @@ import org.eclipse.esmf.ame.services.models.FileInformation;
 import org.eclipse.esmf.ame.services.models.Version;
 import org.eclipse.esmf.ame.services.utils.ModelGroupingUtils;
 import org.eclipse.esmf.ame.services.validation.ValidationOperations;
+import org.eclipse.esmf.ame.services.workspace.WorkspaceConfigService;
 import org.eclipse.esmf.aspectmodel.AspectModelFile;
 import org.eclipse.esmf.aspectmodel.UnsupportedVersionException;
 import org.eclipse.esmf.aspectmodel.loader.AspectModelLoader;
@@ -47,6 +48,7 @@ import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 import org.eclipse.esmf.aspectmodel.validation.services.AspectModelValidator;
 import org.eclipse.esmf.metamodel.AspectModel;
 
+import io.micronaut.core.annotation.Nullable;
 import jakarta.inject.Singleton;
 import org.apache.jena.riot.RiotException;
 import org.slf4j.Logger;
@@ -68,11 +70,13 @@ public class ModelService {
    private final ValidationOperations validationOperations;
    private final Path modelPath;
    private final FileLoadErrorHandler fileLoadErrorHandler;
+   private final @Nullable WorkspaceConfigService workspaceConfigService;
 
    public ModelService( final AspectModelValidator aspectModelValidator, final AspectModelLoader aspectModelLoader,
          final AspectModelRepository aspectModelRepository, final AspectModelReader aspectModelReader,
          final FilePathResolver filePathResolver, final ValidationOperations validationOperations, final Path modelPath,
-         final FileLoadErrorHandler fileLoadErrorHandler ) {
+         final FileLoadErrorHandler fileLoadErrorHandler,
+         final @Nullable WorkspaceConfigService workspaceConfigService ) {
       this.aspectModelValidator = aspectModelValidator;
       this.aspectModelLoader = aspectModelLoader;
       this.aspectModelRepository = aspectModelRepository;
@@ -81,17 +85,30 @@ public class ModelService {
       this.validationOperations = validationOperations;
       this.modelPath = modelPath;
       this.fileLoadErrorHandler = fileLoadErrorHandler;
+      this.workspaceConfigService = workspaceConfigService;
+   }
+
+   public ModelService( final AspectModelValidator aspectModelValidator, final AspectModelLoader aspectModelLoader,
+         final AspectModelRepository aspectModelRepository, final AspectModelReader aspectModelReader,
+         final FilePathResolver filePathResolver, final ValidationOperations validationOperations, final Path modelPath,
+         final FileLoadErrorHandler fileLoadErrorHandler ) {
+      this( aspectModelValidator, aspectModelLoader, aspectModelRepository, aspectModelReader, filePathResolver,
+            validationOperations, modelPath, fileLoadErrorHandler, null );
    }
 
    public ModelService( final AspectModelValidator aspectModelValidator, final AspectModelLoader aspectModelLoader,
          final AspectModelRepository aspectModelRepository, final AspectModelReader aspectModelReader,
          final FilePathResolver filePathResolver, final ValidationOperations validationOperations, final Path modelPath ) {
       this( aspectModelValidator, aspectModelLoader, aspectModelRepository, aspectModelReader, filePathResolver,
-            validationOperations, modelPath, new FileLoadErrorHandler() );
+            validationOperations, modelPath, new FileLoadErrorHandler(), null );
    }
 
    public Path getModelPath() {
-      return modelPath;
+      return workspaceConfigService != null ? workspaceConfigService.getActiveWorkspacePath() : modelPath;
+   }
+
+   public List<Path> getWorkspacePaths() {
+      return workspaceConfigService != null ? workspaceConfigService.getWorkspacePaths() : List.of( modelPath );
    }
 
    public Map<String, List<Version>> getAllNamespaces() {
@@ -118,7 +135,7 @@ public class ModelService {
          final AspectModelUrn urn;
 
          if ( fileEntry.absoluteName() != null ) {
-            final Path filePath = filePathResolver.resolveFromFileEntry( fileEntry, modelPath );
+            final Path filePath = filePathResolver.resolveFromFileEntry( fileEntry, getWorkspacePaths() );
             lazySupplier = aspectModelRepository.loadFromFiles( List.of( filePath.toFile() ) );
             fileIdentifier = filePath.toString();
 

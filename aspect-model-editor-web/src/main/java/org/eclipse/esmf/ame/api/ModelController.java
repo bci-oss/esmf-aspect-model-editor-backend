@@ -154,7 +154,7 @@ public class ModelController {
       final Optional<String> optionalFileName = fileName.map( fileNameSanitizer::sanitize );
       final AspectModelUrn aspectModelUrn = parseAspectModelUrn( urn );
       final String name = optionalFileName.orElse( "" );
-      aspectModelWriter.saveModel( turtleData, aspectModelUrn, name, ApplicationSettings.getMetaModelStoragePath() );
+      aspectModelWriter.saveModel( turtleData, aspectModelUrn, name, modelService.getModelPath() );
       return HttpResponse.status( HttpStatus.CREATED );
    }
 
@@ -252,6 +252,6 @@ public class ModelController {
    @Get( uri = "migrate-workspace" )
    public HttpResponse<MigrationResult> migrateWorkspace( @QueryValue( defaultValue = "false" ) final boolean setNewVersion ) {
       return HttpResponse.ok( aspectModelMigrator.migrateWorkspace( modelService.getAllNamespaces(), setNewVersion,
-            ApplicationSettings.getMetaModelStoragePath() ) );
+            modelService.getModelPath() ) );
    }
 }

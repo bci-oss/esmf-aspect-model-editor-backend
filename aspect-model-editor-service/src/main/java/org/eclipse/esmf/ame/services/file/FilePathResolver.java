@@ -107,5 +107,40 @@ public class FilePathResolver {
       }
       return resolveFromRelativePath( modelPath, fileEntry.absoluteName() );
    }
+
+   /**
+    * Resolves a file path from a relative path string searching across multiple workspace paths.
+    * Returns the first existing file path, or the path resolved in the first workspace directory if none exists.
+    *
+    * @param modelPaths the list of base paths to the model storage directories
+    * @param relativePath the relative file path with colon separators
+    * @return the resolved Path
+    */
+   public Path resolveFromRelativePath( final java.util.List<Path> modelPaths, final String relativePath ) {
+      if ( modelPaths == null || modelPaths.isEmpty() ) {
+         throw new IllegalArgumentException( "Model paths must not be empty" );
+      }
+      for ( final Path base : modelPaths ) {
+         final Path candidate = resolveFromRelativePath( base, relativePath );
+         if ( java.nio.file.Files.exists( candidate ) ) {
+            return candidate;
+         }
+      }
+      return resolveFromRelativePath( modelPaths.getFirst(), relativePath );
+   }
+
+   /**
+    * Converts a FileEntry to a resolved Path searching across multiple workspace paths.
+    *
+    * @param fileEntry the file entry containing the absolute name path
+    * @param modelPaths the list of base paths to the model storage directories
+    * @return the resolved Path
+    */
+   public Path resolveFromFileEntry( final FileEntry fileEntry, final java.util.List<Path> modelPaths ) {
+      if ( fileEntry.absoluteName() == null ) {
+         throw new IllegalArgumentException( "FileEntry absoluteName must not be null" );
+      }
+      return resolveFromRelativePath( modelPaths, fileEntry.absoluteName() );
+   }
 }
 

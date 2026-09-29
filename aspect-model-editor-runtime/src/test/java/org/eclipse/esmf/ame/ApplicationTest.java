@@ -19,7 +19,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -44,6 +47,38 @@ public class ApplicationTest {
    void contextLoads() {
       // This test will simply check if the application context loads successfully
       assertNotNull( client );
+   }
+
+   @Test
+   void testWorkspaceEndpointsLifecycle() throws Exception {
+      // 1. GET /ame/api/workspaces
+      final HttpResponse<String> getRes = client.toBlocking().exchange(
+            HttpRequest.GET( "/ame/api/workspaces" ), String.class );
+      assertEquals( HttpStatus.OK, getRes.getStatus() );
+      assertTrue( getRes.getBody().orElse( "" ).contains( "workspaces" ) );
+
+      // 2. POST /ame/api/workspaces (add new workspace with setActive: true)
+      final Path tempDir = Files.createTempDirectory( "ame-test-ws-" );
+      tempDir.toFile().deleteOnExit();
+
+      final String addPayload = String.format( "{\"path\":\"%s\",\"setActive\":true}",
+            tempDir.toAbsolutePath().normalize().toString().replace( "\\", "\\\\" ) );
+      final HttpResponse<String> postRes = client.toBlocking().exchange(
+            HttpRequest.POST( "/ame/api/workspaces", addPayload )
+                  .contentType( MediaType.APPLICATION_JSON_TYPE ), String.class );
+      assertEquals( HttpStatus.OK, postRes.getStatus() );
+      assertTrue( postRes.getBody().orElse( "" ).contains( tempDir.getFileName().toString() ) );
+
+      // 3. DELETE /ame/api/workspaces?path=...
+      final String deleteUri = "/ame/api/workspaces?path=" + URLEncoder.encode( tempDir.toAbsolutePath().normalize().toString(), StandardCharsets.UTF_8 );
+      final HttpResponse<String> delRes = client.toBlocking().exchange(
+            HttpRequest.DELETE( deleteUri ), String.class );
+      assertEquals( HttpStatus.OK, delRes.getStatus() );
+
+      // 4. POST /ame/api/workspaces/reset
+      final HttpResponse<String> resetRes = client.toBlocking().exchange(
+            HttpRequest.POST( "/ame/api/workspaces/reset", "" ), String.class );
+      assertEquals( HttpStatus.OK, resetRes.getStatus() );
    }
 
    @Test
