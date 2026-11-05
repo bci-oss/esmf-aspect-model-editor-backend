@@ -15,12 +15,10 @@ tests {
     expect(res.getStatus()).to.equal(200);
   });
   
-  test("Response contains workspaces and activeWorkspace", function() {
+  test("Response contains the workspaces", function() {
     const data = res.getBody();
     expect(data).to.have.property("workspaces");
     expect(data.workspaces).to.be.an("array");
     expect(data.workspaces.length).to.be.at.least(1);
-    expect(data).to.have.property("activeWorkspace");
-    expect(data.activeWorkspace).to.be.a("string").that.is.not.empty;
   });
 }

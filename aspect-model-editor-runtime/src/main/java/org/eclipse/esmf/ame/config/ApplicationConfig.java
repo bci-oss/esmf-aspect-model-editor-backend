@@ -64,15 +64,15 @@ public class ApplicationConfig {
    }
 
    /**
-    * Determines and returns the path for models based on the active workspace.
+    * Returns the default workspace, which is always part of the configured workspaces.
     *
     * @param workspaceConfigService the workspace configuration service
-    * @return the absolute path to the active models directory.
+    * @return the absolute path to the default models directory.
     */
    @Bean
    @Singleton
    public Path modelPath( final WorkspaceConfigService workspaceConfigService ) {
-      return workspaceConfigService.getActiveWorkspacePath();
+      return workspaceConfigService.getDefaultWorkspacePath();
    }
 
    /**

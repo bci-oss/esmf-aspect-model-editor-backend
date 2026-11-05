@@ -80,9 +80,9 @@ class PackageControllerTest {
    void testImportPackageSuccess() {
       final CompletedFileUpload upload = MockFileUpload.create( "package.zip" );
       final Map<String, List<Version>> result = Map.of( "org.eclipse.esmf.example", Collections.emptyList() );
-      when( packageService.importPackage( upload ) ).thenReturn( result );
+      when( packageService.importPackage( upload, null ) ).thenReturn( result );
 
-      final HttpResponse<Map<String, List<Version>>> response = controller.importPackage( upload );
+      final HttpResponse<Map<String, List<Version>>> response = controller.importPackage( upload, Optional.empty() );
 
       assertEquals( HttpStatus.OK, response.getStatus() );
       assertNotNull( response.body() );
@@ -94,17 +94,17 @@ class PackageControllerTest {
       final CompletedFileUpload upload = MockFileUpload.create( "package.txt" );
 
       final FileReadException ex = assertThrows( FileReadException.class,
-            () -> controller.importPackage( upload ) );
+            () -> controller.importPackage( upload, Optional.empty() ) );
       assertEquals( 409, ex.getHttpStatusCode() );
       assertTrue( ex.getMessage().contains( "is not in ZIP format" ) );
    }
 
    @Test
    void testBackupWorkspaceSuccess() {
-      final HttpResponse<String> response = controller.backupWorkspace();
+      final HttpResponse<String> response = controller.backupWorkspace( Optional.of( "/ws" ) );
 
       assertEquals( HttpStatus.CREATED, response.getStatus() );
-      verify( packageService ).backupWorkspace();
+      verify( packageService ).backupWorkspace( "/ws" );
    }
 }
 

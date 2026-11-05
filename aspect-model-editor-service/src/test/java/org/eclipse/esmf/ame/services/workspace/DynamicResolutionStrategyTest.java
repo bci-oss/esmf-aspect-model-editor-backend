@@ -53,7 +53,7 @@ class DynamicResolutionStrategyTest {
 
       final Path configFilePath = tempDir.resolve( "workspaces.json" );
       workspaceConfigService = new WorkspaceConfigService( configFilePath, ws1, JsonMapper.createDefault() );
-      workspaceConfigService.addWorkspace( ws2.toString(), false );
+      workspaceConfigService.addWorkspace( ws2.toString() );
 
       strategy = new DynamicResolutionStrategy( workspaceConfigService );
       loader = new AspectModelLoader( strategy );

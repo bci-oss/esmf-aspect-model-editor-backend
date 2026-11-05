@@ -28,6 +28,10 @@ public class Application {
    private static final Logger LOG = LoggerFactory.getLogger( Application.class );
 
    static void main( final String[] args ) {
+      // Reach GitHub through the proxy configured in the operating system, unless a proxy is configured explicitly
+      if ( System.getProperty( "java.net.useSystemProxies" ) == null ) {
+         System.setProperty( "java.net.useSystemProxies", "true" );
+      }
       final ApplicationContext context = Micronaut.run( Application.class, args );
       final AtomicBoolean stopping = new AtomicBoolean();
 

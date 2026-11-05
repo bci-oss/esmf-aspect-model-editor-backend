@@ -193,10 +193,23 @@ class ModelControllerTest {
 
    @Test
    void testCreateOrSaveModelSuccess() {
-      final HttpResponse<String> response = controller.createOrSaveModel( "content", Optional.of( VALID_URN ), Optional.of( "Movement.ttl" ) );
+      final HttpResponse<String> response = controller.createOrSaveModel( "content", Optional.of( VALID_URN ), Optional.of( "Movement.ttl" ),
+            Optional.empty() );
 
       assertEquals( HttpStatus.CREATED, response.getStatus() );
       verify( aspectModelWriter ).saveModel( eq( "content" ), eq( AspectModelUrn.fromUrn( VALID_URN ) ), eq( "Movement.ttl" ), any() );
+   }
+
+   @Test
+   void testCreateOrSaveModelUsesResolvedSaveLocation() {
+      final Path target = Path.of( "/tmp/second-workspace" );
+      when( modelService.resolveSaveLocation( AspectModelUrn.fromUrn( VALID_URN ), "Movement.ttl", "/tmp/second-workspace" ) )
+            .thenReturn( target );
+
+      controller.createOrSaveModel( "content", Optional.of( VALID_URN ), Optional.of( "Movement.ttl" ),
+            Optional.of( "/tmp/second-workspace" ) );
+
+      verify( aspectModelWriter ).saveModel( "content", AspectModelUrn.fromUrn( VALID_URN ), "Movement.ttl", target );
    }
 
    @Test
@@ -216,9 +229,9 @@ class ModelControllerTest {
    @Test
    void testGetReferencesOfNamespace() {
       final ReferenceReport report = blockedReport();
-      when( workspaceCleanupService.checkNamespace( "org.example", "1.0.0" ) ).thenReturn( report );
+      when( workspaceCleanupService.checkNamespace( "org.example", "1.0.0", null ) ).thenReturn( report );
 
-      final HttpResponse<ReferenceReport> response = controller.getReferences( "org.example", "1.0.0", Optional.empty() );
+      final HttpResponse<ReferenceReport> response = controller.getReferences( "org.example", "1.0.0", Optional.empty(), Optional.empty() );
 
       assertEquals( HttpStatus.OK, response.getStatus() );
       assertEquals( report, response.body() );
@@ -227,35 +240,35 @@ class ModelControllerTest {
    @Test
    void testGetReferencesOfFile() {
       final ReferenceReport report = ReferenceReport.empty();
-      when( workspaceCleanupService.checkFile( "org.example", "1.0.0", "A.ttl" ) ).thenReturn( report );
+      when( workspaceCleanupService.checkFile( "org.example", "1.0.0", "A.ttl", "/ws" ) ).thenReturn( report );
 
-      final HttpResponse<ReferenceReport> response = controller.getReferences( "org.example", "1.0.0", Optional.of( "A.ttl" ) );
+      final HttpResponse<ReferenceReport> response = controller.getReferences( "org.example", "1.0.0", Optional.of( "A.ttl" ), Optional.of( "/ws" ) );
 
       assertTrue( response.body().deletable() );
    }
 
    @Test
    void testDeleteNamespaceSuccess() {
-      final HttpResponse<ReferenceReport> response = controller.deleteNamespace( "org.example", "1.0.0" );
+      final HttpResponse<ReferenceReport> response = controller.deleteNamespace( "org.example", "1.0.0", Optional.empty() );
 
       assertEquals( HttpStatus.OK, response.getStatus() );
       assertEquals( ReferenceReport.empty(), response.body() );
-      verify( workspaceCleanupService ).deleteNamespace( "org.example", "1.0.0" );
+      verify( workspaceCleanupService ).deleteNamespace( "org.example", "1.0.0", null );
    }
 
    @Test
    void testDeleteNamespaceStillReferencedPropagatesException() {
-      when( workspaceCleanupService.deleteNamespace( "org.example", "1.0.0" ) )
+      when( workspaceCleanupService.deleteNamespace( "org.example", "1.0.0", null ) )
             .thenThrow( new ModelReferencedException( "used", blockedReport() ) );
 
-      assertThrows( ModelReferencedException.class, () -> controller.deleteNamespace( "org.example", "1.0.0" ) );
+      assertThrows( ModelReferencedException.class, () -> controller.deleteNamespace( "org.example", "1.0.0", Optional.empty() ) );
    }
 
    @Test
    void testClearWorkspace() {
-      when( workspaceCleanupService.clearWorkspace( true ) ).thenReturn( new ClearWorkspaceResult( 3, true ) );
+      when( workspaceCleanupService.clearWorkspace( true, "/ws" ) ).thenReturn( new ClearWorkspaceResult( 3, true ) );
 
-      final HttpResponse<ClearWorkspaceResult> response = controller.clearWorkspace( true );
+      final HttpResponse<ClearWorkspaceResult> response = controller.clearWorkspace( true, Optional.of( "/ws" ) );
 
       assertEquals( HttpStatus.OK, response.getStatus() );
       assertEquals( 3, response.body().deletedFiles() );
@@ -348,12 +361,31 @@ class ModelControllerTest {
       final Path testPath = Path.of( "/tmp/test-models" );
       when( modelService.getModelPath() ).thenReturn( testPath );
 
-      final HttpResponse<StoragePathResponse> response = controller.getStoragePath();
+      final HttpResponse<StoragePathResponse> response = controller.getStoragePath( Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty() );
 
       assertEquals( HttpStatus.OK, response.getStatus() );
       assertNotNull( response.body() );
       assertEquals( testPath.toAbsolutePath().toString(), response.body().path() );
       assertEquals( testPath.toAbsolutePath().toString(), response.body().storagePath() );
+   }
+
+   @Test
+   void testGetStoragePathOfFile() {
+      final Path file = Path.of( "/tmp/github/abc/org.example/1.0.0/Model.ttl" );
+      when( modelService.locateModelFile( "org.example", "1.0.0", "Model.ttl", "/tmp/github/abc" ) ).thenReturn( file );
+
+      final HttpResponse<StoragePathResponse> response = controller.getStoragePath( Optional.of( "org.example" ),
+            Optional.of( "1.0.0" ), Optional.of( "Model.ttl" ), Optional.of( "/tmp/github/abc" ) );
+
+      assertEquals( HttpStatus.OK, response.getStatus() );
+      assertEquals( file.toAbsolutePath().toString(), response.body().storagePath() );
+   }
+
+   @Test
+   void testGetStoragePathOfFileRequiresAllParts() {
+      assertThrows( IllegalArgumentException.class,
+            () -> controller.getStoragePath( Optional.of( "org.example" ), Optional.empty(), Optional.of( "Model.ttl" ),
+                  Optional.empty() ) );
    }
 
    @Test

@@ -28,6 +28,7 @@ import java.util.function.Supplier;
 import org.eclipse.esmf.ame.constants.ApplicationConstants;
 import org.eclipse.esmf.ame.exceptions.FileNotFoundException;
 import org.eclipse.esmf.ame.exceptions.FileReadException;
+import org.eclipse.esmf.ame.exceptions.ReadOnlySourceException;
 import org.eclipse.esmf.ame.model.FileLoadError;
 import org.eclipse.esmf.ame.repository.AspectModelRepository;
 import org.eclipse.esmf.ame.services.file.FilePathResolver;
@@ -112,16 +113,78 @@ public class ModelService {
    }
 
    public Path getModelPath() {
-      return workspaceConfigService != null ? workspaceConfigService.getActiveWorkspacePath() : modelPath;
+      return workspaceConfigService != null ? workspaceConfigService.getDefaultWorkspacePath() : modelPath;
    }
 
    public List<Path> getWorkspacePaths() {
       return workspaceConfigService != null ? workspaceConfigService.getWorkspacePaths() : List.of( modelPath );
    }
 
+   /**
+    * Returns the root directories of all model sources in resolution order, including read-only sources.
+    *
+    * @return the readable source directories
+    */
+   public List<Path> getReadablePaths() {
+      return workspaceConfigService != null ? workspaceConfigService.getReadablePaths() : List.of( modelPath );
+   }
+
+   /**
+    * Finds the file {@code <namespace>/<version>/<fileName>} in the model sources, including read-only GitHub sources.
+    *
+    * @param namespace the namespace of the file
+    * @param version the version of the file
+    * @param fileName the file name
+    * @param source root directory of the source to look in, {@code null} to search all sources in resolution order
+    * @return the absolute path of the existing file
+    * @throws IllegalArgumentException if a value is invalid or the source is not configured
+    * @throws FileNotFoundException if no source contains the file
+    */
+   public Path locateModelFile( final String namespace, final String version, final String fileName, final @Nullable String source ) {
+      final List<Path> roots = getReadablePaths();
+      final List<Path> candidates = source == null || source.isBlank()
+            ? roots
+            : List.of( roots.stream()
+                  .filter( root -> root.toAbsolutePath().normalize().equals( Path.of( source ).toAbsolutePath().normalize() ) )
+                  .findFirst()
+                  .orElseThrow( () -> new IllegalArgumentException( "Unknown model source: " + source ) ) );
+      for ( final Path root : candidates ) {
+         final Path file = filePathResolver.resolveModelFile( root, namespace, version, fileName );
+         if ( Files.isRegularFile( file ) ) {
+            return file;
+         }
+      }
+      throw new FileNotFoundException( "Aspect Model file not found: " + namespace + ":" + version + "/" + fileName );
+   }
+
+   /**
+    * Determines the workspace a model is saved to. An existing file is saved where it is; a new file is saved to
+    * the requested workspace or else to the active workspace.
+    *
+    * @param aspectModelUrn the URN of the model
+    * @param fileName the file name, empty for the default file name
+    * @param targetWorkspace the requested workspace for a new file, {@code null} for the active workspace
+    * @return the workspace directory
+    * @throws ReadOnlySourceException if the file exists in a read-only source only
+    * @throws IllegalArgumentException if the requested workspace is not registered
+    */
+   public Path resolveSaveLocation( final AspectModelUrn aspectModelUrn, final String fileName, final @Nullable String targetWorkspace ) {
+      if ( workspaceConfigService == null ) {
+         return modelPath;
+      }
+      for ( final Path root : getReadablePaths() ) {
+         if ( Files.exists( filePathResolver.resolveFilePath( aspectModelUrn, fileName, root ) ) ) {
+            workspaceConfigService.requireWritable( root );
+            return root;
+         }
+      }
+      return workspaceConfigService.resolveTargetWorkspace( targetWorkspace );
+   }
+
    public Map<String, List<Version>> getAllNamespaces() {
       try {
-         return new ModelGroupingUtils( aspectModelLoader, aspectModelValidator ).groupModelsByNamespaceAndVersion(
+         return new ModelGroupingUtils( aspectModelLoader, aspectModelValidator,
+               workspaceConfigService != null ? workspaceConfigService::findSource : null ).groupModelsByNamespaceAndVersion(
                aspectModelLoader.listContents() );
       } catch ( final ModelResolutionException e ) {
          LOG.error( e.getMessage() );
@@ -156,7 +219,7 @@ public class ModelService {
          final AspectModelUrn urn;
 
          if ( fileEntry.absoluteName() != null ) {
-            final Path filePath = filePathResolver.resolveFromFileEntry( fileEntry, getWorkspacePaths() );
+            final Path filePath = filePathResolver.resolveFromFileEntry( fileEntry, getReadablePaths() );
             lazySupplier = aspectModelRepository.loadFromFiles( List.of( filePath.toFile() ) );
             fileIdentifier = filePath.toString();
 

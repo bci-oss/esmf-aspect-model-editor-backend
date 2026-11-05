@@ -28,6 +28,9 @@ public final class ApplicationConstants {
    public static final class Headers {
       public static final String URI = "uri";
       public static final String URN = "aspect-model-urn";
+      public static final String TARGET_WORKSPACE = "ame-target-workspace";
+      public static final String WORKSPACE = "workspace";
+      public static final String GITHUB_TOKEN = "X-AME-GitHub-Token";
 
       private Headers() {
       }

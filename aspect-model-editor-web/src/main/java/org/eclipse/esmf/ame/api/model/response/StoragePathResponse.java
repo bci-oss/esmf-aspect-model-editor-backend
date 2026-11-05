@@ -18,7 +18,7 @@ import java.nio.file.Path;
 import io.micronaut.serde.annotation.Serdeable;
 
 /**
- * Response object containing the models storage path.
+ * Response object containing the storage path of the active workspace or of a single Aspect Model file.
  *
  * @param path the absolute storage path
  * @param storagePath alias for path

@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.esmf.ame.api.model.request.WorkspaceRequest;
+import org.eclipse.esmf.ame.services.models.workspace.ModelSource;
 import org.eclipse.esmf.ame.services.models.workspace.WorkspaceConfig;
 import org.eclipse.esmf.ame.services.workspace.WorkspaceConfigService;
 
@@ -44,7 +45,7 @@ class WorkspaceControllerTest {
 
    @Test
    void testGetWorkspaces() {
-      final WorkspaceConfig config = new WorkspaceConfig( List.of( "/workspace1", "/workspace2" ), "/workspace1" );
+      final WorkspaceConfig config = new WorkspaceConfig( List.of( "/workspace1", "/workspace2" ) );
       when( workspaceConfigService.getConfig() ).thenReturn( config );
 
       final HttpResponse<WorkspaceConfig> response = workspaceController.getWorkspaces();
@@ -55,16 +56,25 @@ class WorkspaceControllerTest {
    }
 
    @Test
-   void testAddWorkspaceSuccess() {
-      final WorkspaceConfig config = new WorkspaceConfig( List.of( "/workspace1", "/workspace2" ), "/workspace2" );
-      when( workspaceConfigService.addWorkspace( "/workspace2", true ) ).thenReturn( config );
+   void testGetSources() {
+      final List<ModelSource> sources = List.of(
+            new ModelSource( ModelSource.WORKSPACE, "/models", "models (Default)", "/models", false, true ) );
+      when( workspaceConfigService.getSources() ).thenReturn( sources );
 
-      final WorkspaceRequest request = new WorkspaceRequest( "/workspace2", true );
+      assertEquals( sources, workspaceController.getSources().body() );
+   }
+
+   @Test
+   void testAddWorkspaceSuccess() {
+      final WorkspaceConfig config = new WorkspaceConfig( List.of( "/workspace1", "/workspace2" ) );
+      when( workspaceConfigService.addWorkspace( "/workspace2" ) ).thenReturn( config );
+
+      final WorkspaceRequest request = new WorkspaceRequest( "/workspace2" );
       final HttpResponse<WorkspaceConfig> response = workspaceController.addWorkspace( request );
 
       assertEquals( HttpStatus.OK, response.getStatus() );
       assertEquals( config, response.body() );
-      verify( workspaceConfigService ).addWorkspace( "/workspace2", true );
+      verify( workspaceConfigService ).addWorkspace( "/workspace2" );
    }
 
    @Test
@@ -75,27 +85,8 @@ class WorkspaceControllerTest {
    }
 
    @Test
-   void testSetActiveWorkspaceSuccess() {
-      final WorkspaceConfig config = new WorkspaceConfig( List.of( "/workspace1", "/workspace2" ), "/workspace2" );
-      when( workspaceConfigService.setActiveWorkspace( "/workspace2" ) ).thenReturn( config );
-
-      final WorkspaceRequest request = new WorkspaceRequest( "/workspace2" );
-      final HttpResponse<WorkspaceConfig> response = workspaceController.setActiveWorkspace( request );
-
-      assertEquals( HttpStatus.OK, response.getStatus() );
-      assertEquals( config, response.body() );
-      verify( workspaceConfigService ).setActiveWorkspace( "/workspace2" );
-   }
-
-   @Test
-   void testSetActiveWorkspaceBadRequestWhenNullOrBlank() {
-      assertEquals( HttpStatus.BAD_REQUEST, workspaceController.setActiveWorkspace( null ).getStatus() );
-      assertEquals( HttpStatus.BAD_REQUEST, workspaceController.setActiveWorkspace( new WorkspaceRequest( "  " ) ).getStatus() );
-   }
-
-   @Test
    void testDeleteWorkspaceByQueryParam() {
-      final WorkspaceConfig config = new WorkspaceConfig( List.of( "/workspace1" ), "/workspace1" );
+      final WorkspaceConfig config = new WorkspaceConfig( List.of( "/workspace1" ) );
       when( workspaceConfigService.removeWorkspace( "/workspace2" ) ).thenReturn( config );
 
       final HttpResponse<WorkspaceConfig> response = workspaceController.deleteWorkspace( Optional.of( "/workspace2" ), null );
@@ -107,7 +98,7 @@ class WorkspaceControllerTest {
 
    @Test
    void testDeleteWorkspaceByBody() {
-      final WorkspaceConfig config = new WorkspaceConfig( List.of( "/workspace1" ), "/workspace1" );
+      final WorkspaceConfig config = new WorkspaceConfig( List.of( "/workspace1" ) );
       when( workspaceConfigService.removeWorkspace( "/workspace2" ) ).thenReturn( config );
 
       final HttpResponse<WorkspaceConfig> response = workspaceController.deleteWorkspace( Optional.empty(), new WorkspaceRequest( "/workspace2" ) );
@@ -125,7 +116,7 @@ class WorkspaceControllerTest {
 
    @Test
    void testResetWorkspaces() {
-      final WorkspaceConfig config = new WorkspaceConfig( List.of( "/default" ), "/default" );
+      final WorkspaceConfig config = new WorkspaceConfig( List.of( "/default" ) );
       when( workspaceConfigService.resetToDefault() ).thenReturn( config );
 
       final HttpResponse<WorkspaceConfig> response = workspaceController.resetWorkspaces();

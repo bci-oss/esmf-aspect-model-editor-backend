@@ -35,6 +35,7 @@ import io.micronaut.http.annotation.Header;
 import io.micronaut.http.annotation.Part;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.annotation.Produces;
+import io.micronaut.http.annotation.QueryValue;
 import io.micronaut.http.multipart.CompletedFileUpload;
 import org.apache.commons.io.FilenameUtils;
 
@@ -73,12 +74,14 @@ public class PackageController {
     * Imports a zip file containing Aspect Models.
     *
     * @param zipFile - The zip file containing Aspect Model files.
+    * @param workspace - The target workspace, the active workspace if empty.
     * @return A HttpResponse indicating the result of the import operation.
     * @throws FileReadException if the uploaded file is not in ZIP format.
     */
    @Post( "/import" )
    @Consumes( MediaType.MULTIPART_FORM_DATA )
-   public HttpResponse<Map<String, List<Version>>> importPackage( @Part( "zipFile" ) final CompletedFileUpload zipFile ) {
+   public HttpResponse<Map<String, List<Version>>> importPackage( @Part( "zipFile" ) final CompletedFileUpload zipFile,
+         @QueryValue( ApplicationConstants.Headers.WORKSPACE ) final Optional<String> workspace ) {
       final String extension = FilenameUtils.getExtension( zipFile.getFilename() );
 
       if ( !extension.equalsIgnoreCase( "zip" ) ) {
@@ -86,17 +89,18 @@ public class PackageController {
                String.format( "The selected file '%s' is not in ZIP format. Please upload a .zip package.", zipFile.getFilename() ) );
       }
 
-      return HttpResponse.ok( packageService.importPackage( zipFile ) );
+      return HttpResponse.ok( packageService.importPackage( zipFile, workspace.orElse( null ) ) );
    }
 
    /**
     * Backs up workspace files into a package.
     *
+    * @param workspace - The workspace to back up, the active workspace if empty.
     * @return HttpStatus 201 if the backup succeeded.
     */
    @Post( "/backup-workspace" )
-   public HttpResponse<String> backupWorkspace() {
-      packageService.backupWorkspace();
+   public HttpResponse<String> backupWorkspace( @QueryValue( ApplicationConstants.Headers.WORKSPACE ) final Optional<String> workspace ) {
+      packageService.backupWorkspace( workspace.orElse( null ) );
       return HttpResponse.status( HttpStatus.CREATED );
    }
 }

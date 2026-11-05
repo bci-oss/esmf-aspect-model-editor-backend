@@ -16,6 +16,7 @@ package org.eclipse.esmf.ame.services;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -92,11 +93,12 @@ public class AspectModelMigrator {
    }
 
    /**
-    * Migrates all models in a workspace.
+    * Migrates all models of the writable workspaces. Each model stays in its workspace; models of read-only sources
+    * are skipped.
     *
     * @param allNamespaces map of namespaces to versions
     * @param setNewVersion whether to increase the version
-    * @param metaModelStoragePath the storage path
+    * @param metaModelStoragePath the workspace used for models without a known source
     * @return migration result with success status and errors
     */
    public MigrationResult migrateWorkspace(
@@ -148,16 +150,19 @@ public class AspectModelMigrator {
          final boolean setNewVersion, final List<String> errors, final Path metaModelStoragePath ) {
       version.models().forEach( model -> {
          try {
-            if ( !shouldMigrate( model.version() ) ) {
+            if ( !shouldMigrate( model.version() ) || ( model.source() != null && model.source().readOnly() ) ) {
                return;
             }
 
-            final Path aspectModelPath = filePathResolver.constructModelPath(
-                  modelPath, namespace, version.version(), model.name() );
+            final Path root = model.source() != null && Files.exists(
+                  filePathResolver.constructModelPath( model.source().root(), namespace, version.version(), model.name() ) )
+                  ? model.source().root()
+                  : metaModelStoragePath;
+            final Path aspectModelPath = filePathResolver.constructModelPath( root, namespace, version.version(), model.name() );
             final AspectModel aspectModel = aspectModelLoader.load( aspectModelPath.toFile() );
 
             if ( setNewVersion ) {
-               migrateWithVersionChange( aspectModel, errors, metaModelStoragePath );
+               migrateWithVersionChange( aspectModel, errors, root );
             } else {
                AspectSerializer.INSTANCE.write( aspectModel );
             }

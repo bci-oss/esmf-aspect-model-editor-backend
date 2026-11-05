@@ -72,31 +72,88 @@ public class WorkspaceReferenceService {
    }
 
    /**
-    * Returns the active workspace directory, which can change at runtime when multiple workspaces are configured.
+    * Returns the default workspace directory.
     *
-    * @return the active workspace directory
+    * @return the default workspace directory
     */
-   public Path getActiveModelPath() {
-      return workspaceConfigService != null ? workspaceConfigService.getActiveWorkspacePath() : modelPath;
+   public Path getDefaultModelPath() {
+      return workspaceConfigService != null ? workspaceConfigService.getDefaultWorkspacePath() : modelPath;
    }
 
    /**
-    * A Turtle file at the standard workspace location {@code <namespace>/<version>/<file>.ttl}.
+    * Returns the root directories of all model sources in resolution order, including read-only sources.
+    *
+    * @return the readable roots
     */
-   public record WorkspaceFile( Path path, String namespace, String version, String fileName ) {
+   public List<Path> getReadableRoots() {
+      return workspaceConfigService != null ? workspaceConfigService.getReadablePaths() : List.of( modelPath );
+   }
+
+   /**
+    * Returns the writable workspace directories.
+    *
+    * @return the writable roots
+    */
+   public List<Path> getWritableRoots() {
+      return workspaceConfigService != null ? workspaceConfigService.getWorkspacePaths() : List.of( modelPath );
+   }
+
+   /**
+    * Resolves a writable workspace.
+    *
+    * @param workspace the workspace path, {@code null} or blank for the active workspace
+    * @return the workspace directory
+    * @throws IllegalArgumentException if the workspace is not registered
+    */
+   public Path resolveWorkspace( final @Nullable String workspace ) {
+      if ( workspaceConfigService != null ) {
+         return workspaceConfigService.resolveTargetWorkspace( workspace );
+      }
+      if ( workspace == null || workspace.isBlank() || Path.of( workspace.trim() ).toAbsolutePath().normalize()
+            .equals( modelPath.toAbsolutePath().normalize() ) ) {
+         return modelPath;
+      }
+      throw new IllegalArgumentException( "Workspace is not registered: " + workspace );
+   }
+
+   /**
+    * Whether a file belongs to a read-only source.
+    *
+    * @param file the file
+    * @return {@code true} if the file must not be changed
+    */
+   public boolean isReadOnly( final Path file ) {
+      return workspaceConfigService != null && workspaceConfigService.isReadOnly( file );
+   }
+
+   /**
+    * A Turtle file at the standard location {@code <root>/<namespace>/<version>/<file>.ttl}.
+    */
+   public record WorkspaceFile( Path path, String namespace, String version, String fileName, Path root ) {
       boolean isIn( final String otherNamespace, final String otherVersion ) {
          return namespace.equals( otherNamespace ) && version.equals( otherVersion );
       }
    }
 
    /**
-    * Lists all Turtle files of the workspace at their standard location, sorted by namespace, version and name.
-    * Other files (e.g. backups) are ignored.
+    * Lists the Turtle files of all model sources at their standard location, in resolution order of the sources and
+    * sorted by namespace, version and name within each source. Other files (e.g. backups) are ignored.
     *
-    * @return the workspace files
+    * @return the files of all sources
     */
    public List<WorkspaceFile> listWorkspaceFiles() {
-      final Path workspace = getActiveModelPath();
+      return getReadableRoots().stream().flatMap( root -> listWorkspaceFiles( root ).stream() ).toList();
+   }
+
+   /**
+    * Lists the Turtle files of one source directory at their standard location, sorted by namespace, version and
+    * name. Other files (e.g. backups) are ignored.
+    *
+    * @param root the source directory
+    * @return the files of the source
+    */
+   public List<WorkspaceFile> listWorkspaceFiles( final Path root ) {
+      final Path workspace = root.toAbsolutePath().normalize();
       if ( !Files.isDirectory( workspace ) ) {
          return List.of();
       }
@@ -107,7 +164,7 @@ public class WorkspaceReferenceService {
                .map( workspace::relativize )
                .filter( relative -> relative.getNameCount() == 3 )
                .map( relative -> new WorkspaceFile( workspace.resolve( relative ), relative.getName( 0 ).toString(),
-                     relative.getName( 1 ).toString(), relative.getName( 2 ).toString() ) )
+                     relative.getName( 1 ).toString(), relative.getName( 2 ).toString(), workspace ) )
                .sorted( Comparator.comparing( WorkspaceFile::namespace ).thenComparing( WorkspaceFile::version )
                      .thenComparing( WorkspaceFile::fileName ) )
                .toList();
@@ -117,16 +174,32 @@ public class WorkspaceReferenceService {
    }
 
    /**
-    * Finds the files of other namespaces (or other versions of the same namespace) that use elements of the given
-    * namespace version.
+    * Finds the files of other namespaces (or other versions of the same namespace) in all sources that use elements
+    * of the given namespace version.
     *
     * @param namespace the namespace, e.g. {@code org.eclipse.example}
     * @param version the version, e.g. {@code 1.0.0}
     * @return the references found
     */
    public ReferenceReport findNamespaceReferences( final String namespace, final String version ) {
+      return findNamespaceReferences( null, namespace, version );
+   }
+
+   /**
+    * Finds the files that use elements of the given namespace version of one source. Files of the same namespace
+    * version in other sources are checked as well, since they stay after the deletion.
+    *
+    * @param root the source directory containing the namespace version to delete, {@code null} for all sources
+    * @param namespace the namespace, e.g. {@code org.eclipse.example}
+    * @param version the version, e.g. {@code 1.0.0}
+    * @return the references found
+    */
+   public ReferenceReport findNamespaceReferences( final @Nullable Path root, final String namespace, final String version ) {
       final String elementPrefix = "urn:samm:" + namespace + ":" + version + "#";
-      final List<WorkspaceFile> others = listWorkspaceFiles().stream().filter( file -> !file.isIn( namespace, version ) ).toList();
+      final Path normalizedRoot = root == null ? null : root.toAbsolutePath().normalize();
+      final List<WorkspaceFile> others = listWorkspaceFiles().stream()
+            .filter( file -> !file.isIn( namespace, version ) || ( normalizedRoot != null && !file.root().equals( normalizedRoot ) ) )
+            .toList();
       return findReferences( others, uri -> uri.startsWith( elementPrefix ) );
    }
 

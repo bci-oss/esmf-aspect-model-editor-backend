@@ -19,6 +19,5 @@ tests {
     const data = res.getBody();
     expect(data.workspaces).to.be.an("array");
     expect(data.workspaces.length).to.equal(1);
-    expect(data.activeWorkspace).to.equal(data.workspaces[0]);
   });
 }

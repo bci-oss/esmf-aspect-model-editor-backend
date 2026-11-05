@@ -25,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -32,6 +33,7 @@ import org.eclipse.esmf.ame.exceptions.FileReadException;
 import org.eclipse.esmf.ame.exceptions.InvalidAspectModelException;
 import org.eclipse.esmf.ame.services.models.NamespaceModel;
 import org.eclipse.esmf.ame.services.models.Version;
+import org.eclipse.esmf.ame.services.models.workspace.ModelSource;
 import org.eclipse.esmf.aspectmodel.AspectModelFile;
 import org.eclipse.esmf.aspectmodel.loader.AspectModelLoader;
 import org.eclipse.esmf.aspectmodel.resolver.AspectModelFileLoader;
@@ -46,6 +48,7 @@ import org.eclipse.esmf.metamodel.vocabulary.SAMME;
 import org.eclipse.esmf.metamodel.vocabulary.SammNs;
 import org.eclipse.esmf.samm.KnownVersion;
 
+import io.micronaut.core.annotation.Nullable;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDF;
@@ -55,12 +58,12 @@ import org.apache.jena.vocabulary.RDF;
  *
  * @param aspectModelLoader the loader for aspect models
  * @param aspectModelValidator the validator for aspect models
+ * @param sourceResolver resolves the source containing a model file, {@code null} to omit the source
  */
-public record ModelGroupingUtils( AspectModelLoader aspectModelLoader, AspectModelValidator aspectModelValidator ) {
-   /**
-    * Constructs a ModelGrouper with the given base model path.
-    */
-   public ModelGroupingUtils {
+public record ModelGroupingUtils( AspectModelLoader aspectModelLoader, AspectModelValidator aspectModelValidator,
+      @Nullable Function<Path, Optional<ModelSource>> sourceResolver ) {
+   public ModelGroupingUtils( final AspectModelLoader aspectModelLoader, final AspectModelValidator aspectModelValidator ) {
+      this( aspectModelLoader, aspectModelValidator, null );
    }
 
    /**
@@ -139,8 +142,10 @@ public record ModelGroupingUtils( AspectModelLoader aspectModelLoader, AspectMod
          );
       }
 
-      final NamespaceModel model = new NamespaceModel( filename, aspectModelUrn,
-            version.toVersionString(), true );
+      final ModelSource source = sourceResolver == null
+            ? null
+            : sourceResolver.apply( Path.of( rawFile.sourceUri() ) ).orElse( null );
+      final NamespaceModel model = new NamespaceModel( filename, aspectModelUrn, version.toVersionString(), true, source );
 
       return Stream.of( model );
    }

@@ -157,7 +157,7 @@ class WorkspaceCleanupServiceTest {
       final ClearWorkspaceResult result = service.clearWorkspace( true );
 
       assertEquals( new ClearWorkspaceResult( 2, true ), result );
-      verify( packageService ).backupWorkspace();
+      verify( packageService ).backupDirectory( workspace.toAbsolutePath().normalize() );
       assertFalse( Files.exists( workspace.resolve( "org.example.a" ) ) );
       assertFalse( Files.exists( workspace.resolve( "org.example.b" ) ) );
       assertTrue( Files.exists( workspace.resolve( "backup-20260101.zip" ) ) );

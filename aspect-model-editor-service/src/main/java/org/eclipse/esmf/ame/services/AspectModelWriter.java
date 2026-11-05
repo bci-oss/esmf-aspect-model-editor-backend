@@ -24,6 +24,7 @@ import org.eclipse.esmf.ame.exceptions.FileNotFoundException;
 import org.eclipse.esmf.ame.exceptions.FileReadException;
 import org.eclipse.esmf.ame.exceptions.InvalidAspectModelException;
 import org.eclipse.esmf.ame.exceptions.ModelReferencedException;
+import org.eclipse.esmf.ame.exceptions.ReadOnlySourceException;
 import org.eclipse.esmf.ame.model.ReferenceReport;
 import org.eclipse.esmf.ame.repository.AspectModelRepository;
 import org.eclipse.esmf.ame.services.file.FileOperations;
@@ -90,6 +91,7 @@ public class AspectModelWriter {
          final String fileName, final Path storagePath ) {
       try {
          final Path targetFile = filePathResolver.resolveFilePath( aspectModelUrn, fileName, storagePath );
+         requireWritable( targetFile );
          LOG.info( "Creating model at: {}", targetFile );
 
          final Supplier<AspectModel> modelSupplier = aspectModelRepository.loadFromTurtle(
@@ -128,6 +130,7 @@ public class AspectModelWriter {
     * @param aspectModelUrn the URN of the model to delete
     * @throws FileNotFoundException if the model cannot be found
     * @throws ModelReferencedException if other workspace files still use elements of the model
+    * @throws ReadOnlySourceException if the model belongs to a read-only source
     */
    public void deleteModel( final AspectModelUrn aspectModelUrn ) {
       LOG.info( "Deleting model: {}", aspectModelUrn );
@@ -138,6 +141,7 @@ public class AspectModelWriter {
          }
          final AspectModelFile aspectModelFile = aspectModel.files().getFirst();
          fileOperations.sourcePath( aspectModelFile ).ifPresent( path -> {
+            requireWritable( path );
             final ReferenceReport report = workspaceReferenceService.findFileReferences( path );
             if ( !report.deletable() ) {
                throw new ModelReferencedException( "Aspect Model '" + aspectModelUrn + "' is still used by other files", report );
@@ -148,9 +152,18 @@ public class AspectModelWriter {
       } catch ( final ModelReferencedException e ) {
          LOG.info( "Model not deleted, it is still referenced: {}", aspectModelUrn );
          throw e;
+      } catch ( final ReadOnlySourceException e ) {
+         LOG.info( "Model not deleted, it belongs to a read-only source: {}", aspectModelUrn );
+         throw e;
       } catch ( final Exception e ) {
          LOG.error( "Failed to delete model: {}", aspectModelUrn, e );
          throw new FileNotFoundException( "Could not delete Aspect Model '" + aspectModelUrn + "': " + e.getMessage(), e );
+      }
+   }
+
+   private void requireWritable( final Path file ) {
+      if ( workspaceReferenceService.isReadOnly( file ) ) {
+         throw new ReadOnlySourceException( "Models of GitHub sources are read-only: " + file.getFileName() );
       }
    }
 

@@ -87,8 +87,11 @@ public class PackageService {
       this( aspectModelLoader, modelPath, aspectModelValidator, null );
    }
 
-   private Path getActiveModelPath() {
-      return workspaceConfigService != null ? workspaceConfigService.getActiveWorkspacePath() : modelPath;
+   private Path resolveWorkspace( final @Nullable String workspace ) {
+      if ( workspaceConfigService != null ) {
+         return workspaceConfigService.resolveTargetWorkspace( workspace );
+      }
+      return modelPath;
    }
 
    public byte[] exportPackage( final String aspectModelUrn ) {
@@ -97,8 +100,19 @@ public class PackageService {
    }
 
    public Map<String, List<Version>> importPackage( final CompletedFileUpload zipFile ) {
+      return importPackage( zipFile, null );
+   }
+
+   /**
+    * Imports the Aspect Model files of a package into a workspace.
+    *
+    * @param zipFile the package
+    * @param workspace the target workspace, {@code null} for the active workspace
+    * @return the imported models grouped by namespace and version
+    */
+   public Map<String, List<Version>> importPackage( final CompletedFileUpload zipFile, final @Nullable String workspace ) {
       try {
-         final ModelsRoot modelsRoot = new StructuredModelsRoot( getActiveModelPath() );
+         final ModelsRoot modelsRoot = new StructuredModelsRoot( resolveWorkspace( workspace ) );
          final byte[] zipContent = IOUtils.toByteArray( zipFile.getInputStream() );
          final NamespacePackage namespacePackage = new NamespacePackage( zipContent, null );
 
@@ -110,7 +124,8 @@ public class PackageService {
 
          final List<File> list = saveAspectModelFiles( changeManager.aspectModelFiles() ).map( File::new ).toList();
 
-         return new ModelGroupingUtils( aspectModelLoader, aspectModelValidator ).groupModelsByNamespaceAndVersion( list );
+         return new ModelGroupingUtils( aspectModelLoader, aspectModelValidator,
+               workspaceConfigService != null ? workspaceConfigService::findSource : null ).groupModelsByNamespaceAndVersion( list );
       } catch ( final ValueParsingException | IOException e ) {
          if ( e instanceof ValueParsingException ) {
             throw new InvalidAspectModelException( "The structure inside the " + ApplicationConstants.FileExtensions.ZIP + " file does not match the expected format.", e );
@@ -155,8 +170,25 @@ public class PackageService {
    }
 
    public void backupWorkspace() {
+      backupWorkspace( null );
+   }
+
+   /**
+    * Creates a backup zip of all Turtle files of a workspace inside the workspace.
+    *
+    * @param workspace the workspace, {@code null} for the active workspace
+    */
+   public void backupWorkspace( final @Nullable String workspace ) {
+      backupDirectory( resolveWorkspace( workspace ) );
+   }
+
+   /**
+    * Creates a backup zip of all Turtle files of a workspace directory inside the directory.
+    *
+    * @param targetModelPath the workspace directory
+    */
+   public void backupDirectory( final Path targetModelPath ) {
       try {
-         final Path targetModelPath = getActiveModelPath();
          final String timestamp = LocalDateTime.now().format( BACKUP_TIMESTAMP_FORMAT );
          final String zipFileName = targetModelPath.resolve( "backup-" + timestamp + ApplicationConstants.FileExtensions.ZIP ).toString();
 

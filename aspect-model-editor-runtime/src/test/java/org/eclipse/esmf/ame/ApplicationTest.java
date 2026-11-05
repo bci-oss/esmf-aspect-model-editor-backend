@@ -57,11 +57,11 @@ public class ApplicationTest {
       assertEquals( HttpStatus.OK, getRes.getStatus() );
       assertTrue( getRes.getBody().orElse( "" ).contains( "workspaces" ) );
 
-      // 2. POST /ame/api/workspaces (add new workspace with setActive: true)
+      // 2. POST /ame/api/workspaces (add new workspace)
       final Path tempDir = Files.createTempDirectory( "ame-test-ws-" );
       tempDir.toFile().deleteOnExit();
 
-      final String addPayload = String.format( "{\"path\":\"%s\",\"setActive\":true}",
+      final String addPayload = String.format( "{\"path\":\"%s\"}",
             tempDir.toAbsolutePath().normalize().toString().replace( "\\", "\\\\" ) );
       final HttpResponse<String> postRes = client.toBlocking().exchange(
             HttpRequest.POST( "/ame/api/workspaces", addPayload )

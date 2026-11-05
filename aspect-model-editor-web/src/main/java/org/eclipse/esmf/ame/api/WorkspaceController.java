@@ -13,9 +13,11 @@
 
 package org.eclipse.esmf.ame.api;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.esmf.ame.api.model.request.WorkspaceRequest;
+import org.eclipse.esmf.ame.services.models.workspace.ModelSource;
 import org.eclipse.esmf.ame.services.models.workspace.WorkspaceConfig;
 import org.eclipse.esmf.ame.services.workspace.WorkspaceConfigService;
 
@@ -27,7 +29,6 @@ import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Delete;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Post;
-import io.micronaut.http.annotation.Put;
 import io.micronaut.http.annotation.Produces;
 import io.micronaut.http.annotation.QueryValue;
 
@@ -56,7 +57,7 @@ public class WorkspaceController {
    /**
     * Adds a new workspace folder to the configuration.
     *
-    * @param request the workspace request containing the path and optional setActive flag
+    * @param request the workspace request containing the path
     * @return HttpResponse containing the updated workspace configuration
     */
    @Post
@@ -64,23 +65,7 @@ public class WorkspaceController {
       if ( request == null || request.path() == null || request.path().isBlank() ) {
          return HttpResponse.badRequest();
       }
-      final boolean makeActive = Boolean.TRUE.equals( request.setActive() );
-      final WorkspaceConfig config = workspaceConfigService.addWorkspace( request.path().trim(), makeActive );
-      return HttpResponse.ok( config );
-   }
-
-   /**
-    * Sets the active workspace folder.
-    *
-    * @param request the workspace request containing the path to activate
-    * @return HttpResponse containing the updated workspace configuration
-    */
-   @Put( "/active" )
-   public HttpResponse<WorkspaceConfig> setActiveWorkspace( @Body final WorkspaceRequest request ) {
-      if ( request == null || request.path() == null || request.path().isBlank() ) {
-         return HttpResponse.badRequest();
-      }
-      return HttpResponse.ok( workspaceConfigService.setActiveWorkspace( request.path().trim() ) );
+      return HttpResponse.ok( workspaceConfigService.addWorkspace( request.path().trim() ) );
    }
 
    /**
@@ -98,6 +83,17 @@ public class WorkspaceController {
          return HttpResponse.badRequest();
       }
       return HttpResponse.ok( workspaceConfigService.removeWorkspace( targetPath.trim() ) );
+   }
+
+   /**
+    * Lists all sources models are read from, in resolution order: the workspaces followed by the synchronized GitHub
+    * sources.
+    *
+    * @return HttpResponse containing the model sources
+    */
+   @Get( "/sources" )
+   public HttpResponse<List<ModelSource>> getSources() {
+      return HttpResponse.ok( workspaceConfigService.getSources() );
    }
 
    /**

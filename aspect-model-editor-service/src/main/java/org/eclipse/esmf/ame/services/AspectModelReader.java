@@ -136,7 +136,7 @@ public class AspectModelReader {
    private AspectModel loadModel( final AspectModelUrn aspectModelUrn, final @Nullable String filePath ) {
       if ( filePath != null && !filePath.isEmpty() ) {
          final List<Path> paths = workspaceConfigService != null
-               ? workspaceConfigService.getWorkspacePaths()
+               ? workspaceConfigService.getReadablePaths()
                : List.of( modelPath );
          final Path resolvedPath = filePathResolver.resolveFromRelativePath( paths, filePath );
          return aspectModelLoader.load( resolvedPath.toFile() );

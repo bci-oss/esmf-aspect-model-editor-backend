@@ -58,77 +58,40 @@ class WorkspaceConfigServiceTest {
       final WorkspaceConfig config = service.getConfig();
       assertNotNull( config );
       assertEquals( 1, config.workspaces().size() );
-      assertEquals( defaultWorkspacePath.toAbsolutePath().normalize().toString(), config.activeWorkspace() );
-      assertEquals( defaultWorkspacePath.toAbsolutePath().normalize(), service.getActiveWorkspacePath() );
+      assertEquals( defaultWorkspacePath.toAbsolutePath().normalize(), service.resolveTargetWorkspace( null ) );
       assertEquals( List.of( defaultWorkspacePath.toAbsolutePath().normalize() ), service.getWorkspacePaths() );
    }
 
    @Test
-   void testAddWorkspaceWithoutActive() {
+   void testAddWorkspace() {
       final Path newWorkspace = tempDir.resolve( "workspace-two" );
-      final WorkspaceConfig updated = service.addWorkspace( newWorkspace.toString(), false );
+      final WorkspaceConfig updated = service.addWorkspace( newWorkspace.toString() );
 
       assertEquals( 2, updated.workspaces().size() );
       assertTrue( updated.workspaces().contains( newWorkspace.toAbsolutePath().normalize().toString() ) );
-      assertEquals( defaultWorkspacePath.toAbsolutePath().normalize().toString(), updated.activeWorkspace() );
+      assertEquals( defaultWorkspacePath.toAbsolutePath().normalize(), service.resolveTargetWorkspace( null ),
+            "new models without target are saved to the default workspace" );
       assertTrue( Files.exists( newWorkspace ) );
-   }
-
-   @Test
-   void testAddWorkspaceWithActive() {
-      final Path newWorkspace = tempDir.resolve( "workspace-active" );
-      final WorkspaceConfig updated = service.addWorkspace( newWorkspace.toString(), true );
-
-      assertEquals( 2, updated.workspaces().size() );
-      assertEquals( newWorkspace.toAbsolutePath().normalize().toString(), updated.activeWorkspace() );
-      assertEquals( newWorkspace.toAbsolutePath().normalize(), service.getActiveWorkspacePath() );
    }
 
    @Test
    void testAddDuplicateWorkspaceDoesNotDuplicate() {
       final Path newWorkspace = tempDir.resolve( "workspace-dup" );
-      service.addWorkspace( newWorkspace.toString(), false );
-      final WorkspaceConfig updated = service.addWorkspace( newWorkspace.toString(), false );
+      service.addWorkspace( newWorkspace.toString() );
+      final WorkspaceConfig updated = service.addWorkspace( newWorkspace.toString() );
 
       assertEquals( 2, updated.workspaces().size() );
    }
 
    @Test
-   void testSetActiveWorkspaceSuccess() {
-      final Path newWorkspace = tempDir.resolve( "workspace-to-activate" );
-      service.addWorkspace( newWorkspace.toString(), false );
-
-      final WorkspaceConfig updated = service.setActiveWorkspace( newWorkspace.toString() );
-      assertEquals( newWorkspace.toAbsolutePath().normalize().toString(), updated.activeWorkspace() );
-      assertEquals( newWorkspace.toAbsolutePath().normalize(), service.getActiveWorkspacePath() );
-   }
-
-   @Test
-   void testSetActiveWorkspaceFailsWhenNotRegistered() {
-      final Path unregistered = tempDir.resolve( "unregistered" );
-      assertThrows( IllegalArgumentException.class, () -> service.setActiveWorkspace( unregistered.toString() ) );
-   }
-
-   @Test
    void testRemoveWorkspaceSuccess() {
       final Path ws2 = tempDir.resolve( "workspace-2" );
-      service.addWorkspace( ws2.toString(), false );
+      service.addWorkspace( ws2.toString() );
       assertEquals( 2, service.getConfig().workspaces().size() );
 
       final WorkspaceConfig updated = service.removeWorkspace( ws2.toString() );
       assertEquals( 1, updated.workspaces().size() );
       assertFalse( updated.workspaces().contains( ws2.toAbsolutePath().normalize().toString() ) );
-   }
-
-   @Test
-   void testRemoveActiveWorkspaceSwitchesToRemaining() {
-      final Path ws2 = tempDir.resolve( "workspace-2" );
-      service.addWorkspace( ws2.toString(), true );
-      assertEquals( ws2.toAbsolutePath().normalize().toString(), service.getConfig().activeWorkspace() );
-
-      final WorkspaceConfig updated = service.removeWorkspace( ws2.toString() );
-      assertEquals( 1, updated.workspaces().size() );
-      assertEquals( defaultWorkspacePath.toAbsolutePath().normalize().toString(), updated.activeWorkspace() );
    }
 
    @Test
@@ -145,25 +108,25 @@ class WorkspaceConfigServiceTest {
    @Test
    void testResetToDefault() {
       final Path ws2 = tempDir.resolve( "workspace-2" );
-      service.addWorkspace( ws2.toString(), true );
+      service.addWorkspace( ws2.toString() );
       assertEquals( 2, service.getConfig().workspaces().size() );
 
       final WorkspaceConfig reset = service.resetToDefault();
       assertEquals( 1, reset.workspaces().size() );
-      assertEquals( defaultWorkspacePath.toAbsolutePath().normalize().toString(), reset.activeWorkspace() );
+      assertEquals( List.of( defaultWorkspacePath.toAbsolutePath().normalize().toString() ), reset.workspaces() );
    }
 
    @Test
    void testPersistenceAcrossInstances() {
       final Path ws2 = tempDir.resolve( "persisted-ws" );
-      service.addWorkspace( ws2.toString(), true );
+      service.addWorkspace( ws2.toString() );
 
       // Instantiate a second service pointing to the same config file
       final WorkspaceConfigService service2 = new WorkspaceConfigService( configFilePath, defaultWorkspacePath, jsonMapper );
       final WorkspaceConfig loaded = service2.getConfig();
 
       assertEquals( 2, loaded.workspaces().size() );
-      assertEquals( ws2.toAbsolutePath().normalize().toString(), loaded.activeWorkspace() );
+      assertTrue( loaded.workspaces().contains( ws2.toAbsolutePath().normalize().toString() ) );
    }
 
    @Test

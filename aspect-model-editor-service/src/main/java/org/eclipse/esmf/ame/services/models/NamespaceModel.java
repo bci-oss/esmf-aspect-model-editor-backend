@@ -13,9 +13,11 @@
 
 package org.eclipse.esmf.ame.services.models;
 
+import org.eclipse.esmf.ame.services.models.workspace.ModelSource;
 import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 
 import io.micronaut.core.annotation.Introspected;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 
 /**
@@ -25,6 +27,7 @@ import io.micronaut.serde.annotation.Serdeable;
  * @param aspectModelUrn the URN of the aspect model
  * @param version the version of the model
  * @param exists indicates whether the model already exists in the workspace
+ * @param source the workspace or GitHub source containing the model, {@code null} if unknown
  */
 @Serdeable
 @Introspected
@@ -32,5 +35,10 @@ public record NamespaceModel(
       String name,
       AspectModelUrn aspectModelUrn,
       String version,
-      boolean exists
-) {}
+      boolean exists,
+      @Nullable ModelSource source
+) {
+   public NamespaceModel( final String name, final AspectModelUrn aspectModelUrn, final String version, final boolean exists ) {
+      this( name, aspectModelUrn, version, exists, null );
+   }
+}

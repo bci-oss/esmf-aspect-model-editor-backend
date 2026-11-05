@@ -212,7 +212,7 @@ class WorkspaceReferenceServiceTest {
    }
 
    @Test
-   void followsTheActiveWorkspaceWhenItChanges() throws IOException {
+   void listsTheFilesOfAllWorkspaces() throws IOException {
       final Path second = Files.createDirectories( workspace.resolve( "second" ) );
       final Path defaultWorkspace = Files.createDirectories( workspace.resolve( "default" ) );
       providerA( defaultWorkspace );
@@ -222,10 +222,11 @@ class WorkspaceReferenceServiceTest {
 
       assertEquals( 1, workspaceAware.listWorkspaceFiles().size() );
 
-      configService.addWorkspace( second.toString(), true );
+      configService.addWorkspace( second.toString() );
 
-      assertEquals( second.toAbsolutePath().normalize(), workspaceAware.getActiveModelPath() );
-      assertTrue( workspaceAware.listWorkspaceFiles().isEmpty() );
+      assertEquals( defaultWorkspace.toAbsolutePath().normalize(), workspaceAware.getDefaultModelPath() );
+      assertEquals( 1, workspaceAware.listWorkspaceFiles().size() );
+      assertTrue( workspaceAware.listWorkspaceFiles( second ).isEmpty() );
    }
 
    @Test

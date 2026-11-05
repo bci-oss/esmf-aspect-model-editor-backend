@@ -15,6 +15,7 @@ package org.eclipse.esmf.ame.api;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -168,18 +169,22 @@ public class ModelController {
    }
 
    /**
-    * Method used to create a turtle file.
+    * Method used to create a turtle file. An existing file is saved where it is; a new file is saved to the workspace
+    * given by the header {@code ame-target-workspace} or else to the active workspace. Models of read-only sources
+    * cannot be saved (403).
     *
     * @param turtleData To store in file.
     */
    @Post( consumes = { MediaType.TEXT_PLAIN, MediaTypeExtension.TEXT_TURTLE_VALUE } )
    public HttpResponse<String> createOrSaveModel( @Body final String turtleData,
          @Header( ApplicationConstants.Headers.URN ) final Optional<String> urn,
-         @Header( "file-name" ) final Optional<String> fileName ) {
+         @Header( "file-name" ) final Optional<String> fileName,
+         @Header( ApplicationConstants.Headers.TARGET_WORKSPACE ) final Optional<String> targetWorkspace ) {
       final Optional<String> optionalFileName = fileName.map( fileNameSanitizer::sanitize );
       final AspectModelUrn aspectModelUrn = parseAspectModelUrn( urn );
       final String name = optionalFileName.orElse( "" );
-      aspectModelWriter.saveModel( turtleData, aspectModelUrn, name, modelService.getModelPath() );
+      final Path storagePath = modelService.resolveSaveLocation( aspectModelUrn, name, targetWorkspace.orElse( null ) );
+      aspectModelWriter.saveModel( turtleData, aspectModelUrn, name, storagePath );
       return HttpResponse.status( HttpStatus.CREATED );
    }
 
@@ -200,16 +205,19 @@ public class ModelController {
     * @param namespace the namespace, e.g. {@code org.eclipse.example}
     * @param version the version, e.g. {@code 1.0.0}
     * @param fileName optional file name to check a single file instead of the whole namespace version
+    * @param workspace optional workspace containing the files; determined automatically if only one workspace has them
     * @return the files that use the elements and the files that could not be checked
     */
    @Get( uri = "references" )
    @Produces( MediaType.APPLICATION_JSON )
    public HttpResponse<ReferenceReport> getReferences( @QueryValue( "namespace" ) final String namespace,
          @QueryValue( "version" ) final String version,
-         @QueryValue( "fileName" ) final Optional<String> fileName ) {
+         @QueryValue( "fileName" ) final Optional<String> fileName,
+         @QueryValue( ApplicationConstants.Headers.WORKSPACE ) final Optional<String> workspace ) {
+      final String ws = workspace.orElse( null );
       return HttpResponse.ok( fileName
-            .map( name -> workspaceCleanupService.checkFile( namespace, version, name ) )
-            .orElseGet( () -> workspaceCleanupService.checkNamespace( namespace, version ) ) );
+            .map( name -> workspaceCleanupService.checkFile( namespace, version, name, ws ) )
+            .orElseGet( () -> workspaceCleanupService.checkNamespace( namespace, version, ws ) ) );
    }
 
    /**
@@ -218,13 +226,15 @@ public class ModelController {
     *
     * @param namespace the namespace
     * @param version the version
+    * @param workspace optional workspace containing the namespace version
     * @return 200 if deleted, 409 with the reference report if it is still used
     */
    @Delete( uri = "namespace" )
    @Produces( MediaType.APPLICATION_JSON )
    public HttpResponse<ReferenceReport> deleteNamespace( @QueryValue( "namespace" ) final String namespace,
-         @QueryValue( "version" ) final String version ) {
-      workspaceCleanupService.deleteNamespace( namespace, version );
+         @QueryValue( "version" ) final String version,
+         @QueryValue( ApplicationConstants.Headers.WORKSPACE ) final Optional<String> workspace ) {
+      workspaceCleanupService.deleteNamespace( namespace, version, workspace.orElse( null ) );
       return HttpResponse.ok( ReferenceReport.empty() );
    }
 
@@ -232,12 +242,14 @@ public class ModelController {
     * Deletes all Aspect Model files of the workspace. Backups and other files are kept.
     *
     * @param backup whether a backup of the workspace is created first (default: true)
+    * @param workspace optional workspace to clear, the active workspace if empty
     * @return the number of deleted files and whether a backup was created
     */
    @Delete( uri = "workspace" )
    @Produces( MediaType.APPLICATION_JSON )
-   public HttpResponse<ClearWorkspaceResult> clearWorkspace( @QueryValue( value = "backup", defaultValue = "true" ) final boolean backup ) {
-      return HttpResponse.ok( workspaceCleanupService.clearWorkspace( backup ) );
+   public HttpResponse<ClearWorkspaceResult> clearWorkspace( @QueryValue( value = "backup", defaultValue = "true" ) final boolean backup,
+         @QueryValue( ApplicationConstants.Headers.WORKSPACE ) final Optional<String> workspace ) {
+      return HttpResponse.ok( workspaceCleanupService.clearWorkspace( backup, workspace.orElse( null ) ) );
    }
 
    /**
@@ -295,14 +307,29 @@ public class ModelController {
    }
 
    /**
-    * Returns the storage path where aspect models are stored.
+    * Returns the storage path of the active workspace or, if namespace, version and file name are given, the path of
+    * the file in the workspace or GitHub source that contains it.
     *
+    * @param namespace optional namespace of the file
+    * @param version optional version of the file
+    * @param fileName optional file name
+    * @param workspace optional root directory of the source containing the file; all sources are searched if empty
     * @return a HttpResponse containing the storage path details.
     */
    @Get( uri = "storage-path" )
    @Produces( MediaType.APPLICATION_JSON )
-   public HttpResponse<StoragePathResponse> getStoragePath() {
-      return HttpResponse.ok( new StoragePathResponse( modelService.getModelPath() ) );
+   public HttpResponse<StoragePathResponse> getStoragePath( @QueryValue( "namespace" ) final Optional<String> namespace,
+         @QueryValue( "version" ) final Optional<String> version,
+         @QueryValue( "fileName" ) final Optional<String> fileName,
+         @QueryValue( ApplicationConstants.Headers.WORKSPACE ) final Optional<String> workspace ) {
+      if ( namespace.isEmpty() && version.isEmpty() && fileName.isEmpty() ) {
+         return HttpResponse.ok( new StoragePathResponse( modelService.getModelPath() ) );
+      }
+      if ( namespace.isEmpty() || version.isEmpty() || fileName.isEmpty() ) {
+         throw new IllegalArgumentException( "namespace, version and fileName are required to locate a file" );
+      }
+      return HttpResponse.ok( new StoragePathResponse(
+            modelService.locateModelFile( namespace.get(), version.get(), fileName.get(), workspace.orElse( null ) ) ) );
    }
 
    /**

@@ -30,24 +30,40 @@ import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 import jakarta.inject.Singleton;
 
 /**
- * A dynamic {@link ResolutionStrategy} that delegates resolution to all workspace paths
- * configured in {@link WorkspaceConfigService}.
+ * A dynamic {@link ResolutionStrategy} that delegates resolution to all model sources configured in
+ * {@link WorkspaceConfigService}: the local workspaces followed by the synchronized GitHub sources.
  * <p>
- * When multiple workspace directories are registered, this strategy wraps them in an
- * {@link EitherStrategy}, allowing URN and file lookups across all directories seamlessly.
+ * Multiple sources are wrapped in an {@link EitherStrategy}; the first source containing a model wins.
  * </p>
  */
 @Singleton
 public class DynamicResolutionStrategy implements ResolutionStrategy {
 
    private final WorkspaceConfigService workspaceConfigService;
+   private List<Path> cachedPaths = List.of();
+   private ResolutionStrategy cachedStrategy;
 
    public DynamicResolutionStrategy( final WorkspaceConfigService workspaceConfigService ) {
       this.workspaceConfigService = workspaceConfigService;
    }
 
-   protected ResolutionStrategy currentStrategy() {
-      final List<Path> paths = workspaceConfigService.getWorkspacePaths();
+   protected synchronized ResolutionStrategy currentStrategy() {
+      final List<Path> paths = workspaceConfigService.getReadablePaths();
+      if ( cachedStrategy == null || !paths.equals( cachedPaths ) ) {
+         cachedStrategy = createStrategy( paths );
+         cachedPaths = paths;
+      }
+      return cachedStrategy;
+   }
+
+   /**
+    * Discards the current strategy, e.g. after the local copy of a source was replaced.
+    */
+   public synchronized void invalidate() {
+      cachedStrategy = null;
+   }
+
+   private ResolutionStrategy createStrategy( final List<Path> paths ) {
       if ( paths.isEmpty() ) {
          return new FileSystemStrategy( workspaceConfigService.getDefaultWorkspacePath() );
       }
