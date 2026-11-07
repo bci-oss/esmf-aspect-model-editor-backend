@@ -1,0 +1,29 @@
+meta {
+  name: GetElementUsage
+  type: http
+  seq: 108
+}
+
+get {
+  url: http://localhost:{{port}}/ame/api/models/usage
+  body: none
+  auth: none
+}
+
+headers {
+  aspect-model-urn: urn:samm:org.eclipse.bruno.refactoring:1.0.0#sharedProperty
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("The using elements of the own and of other files are listed", function() {
+    const body = res.getBody();
+    expect(body.urn).to.equal("urn:samm:org.eclipse.bruno.refactoring:1.0.0#sharedProperty");
+    const usages = body.usages.map(usage => [usage.urn, usage.external]);
+    expect(usages).to.deep.include(["urn:samm:org.eclipse.bruno.consumer:1.0.0#Consumer", true]);
+    expect(usages).to.deep.include(["urn:samm:org.eclipse.bruno.refactoring:1.0.0#Provider", false]);
+  });
+}

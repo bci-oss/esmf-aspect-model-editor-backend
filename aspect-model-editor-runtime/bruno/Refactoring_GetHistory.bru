@@ -1,0 +1,23 @@
+meta {
+  name: Refactoring_GetHistory
+  type: http
+  seq: 104
+}
+
+get {
+  url: http://localhost:{{port}}/ame/api/refactoring/history
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("The latest refactoring is listed first", function() {
+    const body = res.getBody();
+    expect(body[0].id).to.equal(bru.getVar("refactoringId"));
+    expect(body[0].description).to.equal("Rename sharedProperty to renamedProperty");
+  });
+}

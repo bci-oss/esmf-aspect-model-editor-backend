@@ -1,0 +1,21 @@
+meta {
+  name: ImportAas_AlreadyExists
+  type: http
+  seq: 118
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/package/import-aas
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  aasFile: @file(./TestingFiles/MovementAas.json)
+}
+
+tests {
+  test("Status code is 409", function() {
+    expect(res.getStatus()).to.equal(409);
+  });
+}

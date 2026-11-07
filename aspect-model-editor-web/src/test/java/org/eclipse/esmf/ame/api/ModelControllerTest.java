@@ -54,6 +54,9 @@ import org.eclipse.esmf.ame.services.models.FileEntry;
 import org.eclipse.esmf.ame.services.models.FileInformation;
 import org.eclipse.esmf.ame.services.models.MigrationResult;
 import org.eclipse.esmf.ame.services.models.Version;
+import org.eclipse.esmf.ame.services.models.workspace.ElementUsage;
+import org.eclipse.esmf.ame.services.models.workspace.ElementUsageReport;
+import org.eclipse.esmf.ame.services.workspace.ElementUsageService;
 import org.eclipse.esmf.ame.services.workspace.WorkspaceCleanupService;
 import org.eclipse.esmf.ame.validation.model.ViolationReport;
 import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
@@ -73,6 +76,7 @@ class ModelControllerTest {
    private AspectModelMigrator aspectModelMigrator;
    private FileNameSanitizer fileNameSanitizer;
    private WorkspaceCleanupService workspaceCleanupService;
+   private ElementUsageService elementUsageService;
    private ModelController controller;
 
    private static final String VALID_URN = "urn:samm:org.eclipse.esmf.example:1.0.0#Movement";
@@ -86,6 +90,7 @@ class ModelControllerTest {
       aspectModelMigrator = mock( AspectModelMigrator.class );
       fileNameSanitizer = new FileNameSanitizer();
       workspaceCleanupService = mock( WorkspaceCleanupService.class );
+      elementUsageService = mock( ElementUsageService.class );
 
       controller = new ModelController(
             modelService,
@@ -94,8 +99,27 @@ class ModelControllerTest {
             validationService,
             aspectModelMigrator,
             fileNameSanitizer,
-            workspaceCleanupService
+            workspaceCleanupService,
+            elementUsageService
       );
+   }
+
+   @Test
+   void testGetUsage() {
+      final ElementUsageReport report = new ElementUsageReport( VALID_URN, List.of(
+            new ElementUsage( "urn:samm:org.eclipse.esmf.other:1.0.0#Other", "org.eclipse.esmf.other", "1.0.0", "Other.ttl",
+                  "/models/org.eclipse.esmf.other/1.0.0/Other.ttl", false, true ) ), List.of() );
+      when( elementUsageService.findUsages( AspectModelUrn.fromUrn( VALID_URN ) ) ).thenReturn( report );
+
+      final HttpResponse<ElementUsageReport> response = controller.getUsage( Optional.of( VALID_URN ) );
+
+      assertEquals( HttpStatus.OK, response.getStatus() );
+      assertSame( report, response.body() );
+   }
+
+   @Test
+   void testGetUsageWithoutUrn() {
+      assertThrows( FileNotFoundException.class, () -> controller.getUsage( Optional.empty() ) );
    }
 
    @Test

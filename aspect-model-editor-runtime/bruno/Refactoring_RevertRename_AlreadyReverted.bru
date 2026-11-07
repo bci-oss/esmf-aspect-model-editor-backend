@@ -1,0 +1,21 @@
+meta {
+  name: Refactoring_RevertRename_AlreadyReverted
+  type: http
+  seq: 106
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/refactoring/history/{{refactoringId}}/revert
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status code is 404", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+}

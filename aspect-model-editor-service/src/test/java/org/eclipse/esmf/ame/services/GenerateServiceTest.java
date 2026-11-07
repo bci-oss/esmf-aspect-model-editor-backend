@@ -13,6 +13,7 @@
 
 package org.eclipse.esmf.ame.services;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -23,13 +24,19 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.eclipse.esmf.ame.exceptions.GenerationException;
 import org.eclipse.esmf.ame.model.MockFileUpload;
+import org.eclipse.esmf.aspectmodel.generator.diagram.DiagramGenerationConfig;
 import org.eclipse.esmf.aspectmodel.generator.openapi.OpenApiSchemaGenerationConfig;
 import org.eclipse.esmf.aspectmodel.generator.openapi.PagingOption;
+import org.eclipse.esmf.aspectmodel.generator.sql.SqlGenerationConfig;
 
 import io.micronaut.http.MediaType;
 import io.micronaut.http.multipart.CompletedFileUpload;
@@ -573,6 +580,99 @@ class GenerateServiceTest {
       } catch ( final IOException e ) {
          return false;
       }
+   }
+
+   @Test
+   void testAspectModelSvgDiagram() throws IOException {
+      final byte[] payload = generateService.generateDiagram( movementUpload(), movementUri(), "en", DiagramGenerationConfig.Format.SVG );
+
+      final String svg = new String( payload, StandardCharsets.UTF_8 );
+      assertTrue( svg.contains( "<svg" ) );
+      assertTrue( svg.contains( "Movement" ) );
+   }
+
+   @Test
+   void testAspectModelPngDiagram() throws IOException {
+      final byte[] payload = generateService.generateDiagram( movementUpload(), movementUri(), "en", DiagramGenerationConfig.Format.PNG );
+
+      final byte[] pngSignature = { (byte) 0x89, 'P', 'N', 'G' };
+      assertArrayEquals( pngSignature, Arrays.copyOf( payload, pngSignature.length ) );
+   }
+
+   @Test
+   void testAspectModelPostgreSql() throws IOException {
+      final String sql = generateService.generateSql( movementUpload(), movementUri(), "en", SqlGenerationConfig.Dialect.POSTGRESQL );
+
+      assertTrue( sql.contains( "CREATE TABLE" ) );
+      assertTrue( sql.contains( "movement" ) );
+   }
+
+   @Test
+   void testAspectModelDatabricksSql() throws IOException {
+      final String sql = generateService.generateSql( movementUpload(), movementUri(), "en", SqlGenerationConfig.Dialect.DATABRICKS );
+
+      assertTrue( sql.contains( "CREATE TABLE" ) );
+      assertTrue( sql.contains( "movement" ) );
+   }
+
+   @Test
+   void testAspectModelJsonLd() throws IOException {
+      final String jsonLd = generateService.generateJsonLd( movementUpload(), movementUri() );
+
+      final JsonNode actual = new ObjectMapper().readTree( jsonLd );
+      assertTrue( actual.has( "@context" ) );
+   }
+
+   @Test
+   void testAspectModelJavaClassesWithDerivedPackageName() throws IOException {
+      final byte[] zip = generateService.generateJavaClasses( movementUpload(), movementUri(), "", false, true );
+
+      final Set<String> entries = zipEntryNames( zip );
+      assertTrue( entries.contains( "org/eclipse/esmf/example/Movement.java" ), entries::toString );
+      assertTrue( entries.stream().noneMatch( entry -> entry.contains( "/Meta" ) ), entries::toString );
+   }
+
+   @Test
+   void testAspectModelJavaClassesWithStaticMetaModel() throws IOException {
+      final byte[] zip = generateService.generateJavaClasses( movementUpload(), movementUri(), "com.example.movement", true, false );
+
+      final Set<String> entries = zipEntryNames( zip );
+      assertTrue( entries.contains( "com/example/movement/Movement.java" ), entries::toString );
+      assertTrue( entries.contains( "com/example/movement/MetaMovement.java" ), entries::toString );
+   }
+
+   @Test
+   void testAspectModelJavaClassesWithInvalidPackageName() {
+      assertThrows( GenerationException.class,
+            () -> generateService.generateJavaClasses( movementUpload(), movementUri(), "com.1example", false, true ) );
+   }
+
+   @Test
+   void testAspectModelParquetPayload() throws IOException {
+      final byte[] parquet = generateService.generateParquetPayload( movementUpload(), movementUri() );
+
+      final byte[] magic = "PAR1".getBytes( StandardCharsets.US_ASCII );
+      assertArrayEquals( magic, Arrays.copyOfRange( parquet, 0, magic.length ) );
+      assertArrayEquals( magic, Arrays.copyOfRange( parquet, parquet.length - magic.length, parquet.length ) );
+   }
+
+   private Set<String> zipEntryNames( final byte[] zip ) throws IOException {
+      final Set<String> names = new HashSet<>();
+      try ( final ZipInputStream zis = new ZipInputStream( new ByteArrayInputStream( zip ) ) ) {
+         for ( ZipEntry entry = zis.getNextEntry(); entry != null; entry = zis.getNextEntry() ) {
+            names.add( entry.getName() );
+         }
+      }
+      return names;
+   }
+
+   private CompletedFileUpload movementUpload() throws IOException {
+      final byte[] content = Files.readAllBytes( Path.of( eclipseTestPath.toString(), model ) );
+      return MockFileUpload.create( "TestArchive.ttl", content, MediaType.of( MediaType.MULTIPART_FORM_DATA ) );
+   }
+
+   private URI movementUri() {
+      return URI.create( "blob:///" + toUriPath( Path.of( eclipseTestPath.toString(), model ) ) );
    }
 
    public String toUriPath( final Path path ) {

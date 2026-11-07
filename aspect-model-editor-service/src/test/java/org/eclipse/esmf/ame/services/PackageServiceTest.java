@@ -14,8 +14,10 @@
 package org.eclipse.esmf.ame.services;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -25,12 +27,23 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.eclipse.esmf.ame.exceptions.CreateFileException;
+import org.eclipse.esmf.ame.exceptions.FileReadException;
+import org.eclipse.esmf.ame.exceptions.InvalidAspectModelException;
 import org.eclipse.esmf.ame.model.MockFileUpload;
+import org.eclipse.esmf.ame.services.models.AasImportCandidate;
+import org.eclipse.esmf.ame.services.models.Version;
+import org.eclipse.esmf.aspectmodel.aas.AasFileFormat;
+import org.eclipse.esmf.aspectmodel.aas.AasGenerationConfigBuilder;
+import org.eclipse.esmf.aspectmodel.aas.AspectModelAasGenerator;
+import org.eclipse.esmf.aspectmodel.loader.AspectModelLoader;
 
 import io.micronaut.http.MediaType;
 import io.micronaut.http.multipart.CompletedFileUpload;
@@ -38,11 +51,15 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 @MicronautTest
 class PackageServiceTest {
    @Inject
    private PackageService packageService;
+
+   @TempDir
+   private Path tempDir;
 
    private static final String FILE_EXTENSION = ".ttl";
 
@@ -56,22 +73,30 @@ class PackageServiceTest {
 
    private static final String FILE_ONE = "TestFileOne";
 
+   private static final String AAS_NAMESPACE = "org.eclipse.esmf.aas";
+
+   private static final String AAS_ASPECT_MODEL = """
+         @prefix samm: <urn:samm:org.eclipse.esmf.samm:meta-model:2.2.0#> .
+         @prefix samm-c: <urn:samm:org.eclipse.esmf.samm:characteristic:2.2.0#> .
+         @prefix : <urn:samm:org.eclipse.esmf.aas:1.0.0#> .
+
+         :ImportedAspect a samm:Aspect ;
+            samm:preferredName "Imported Aspect"@en ;
+            samm:properties ( :name ) ;
+            samm:operations ( ) .
+
+         :name a samm:Property ;
+            samm:preferredName "Name"@en ;
+            samm:characteristic samm-c:Text .
+         """;
+
    @AfterEach
    void tearDown() throws IOException {
       final Path importedFile = RESOURCE_PATH.resolve( Path.of( "org.eclipse.esmf.example", "1.0.0", "Esmf.ttl" ) );
       Files.deleteIfExists( importedFile );
 
-      final Path importedTestDir = RESOURCE_PATH.resolve( "org.eclipse.esmf.test" );
-      if ( Files.exists( importedTestDir ) ) {
-         try ( final Stream<Path> stream = Files.walk( importedTestDir ) ) {
-            stream.sorted( Comparator.reverseOrder() ).forEach( path -> {
-               try {
-                  Files.deleteIfExists( path );
-               } catch ( final IOException ignored ) {
-               }
-            } );
-         }
-      }
+      deleteDirectory( RESOURCE_PATH.resolve( "org.eclipse.esmf.test" ) );
+      deleteDirectory( RESOURCE_PATH.resolve( AAS_NAMESPACE ) );
 
       try ( final Stream<Path> stream = Files.list( RESOURCE_PATH ) ) {
          stream.filter( path -> path.getFileName().toString().startsWith( "backup-" )
@@ -82,6 +107,19 @@ class PackageServiceTest {
                   } catch ( final IOException ignored ) {
                   }
                } );
+      }
+   }
+
+   private static void deleteDirectory( final Path directory ) throws IOException {
+      if ( Files.exists( directory ) ) {
+         try ( final Stream<Path> stream = Files.walk( directory ) ) {
+            stream.sorted( Comparator.reverseOrder() ).forEach( path -> {
+               try {
+                  Files.deleteIfExists( path );
+               } catch ( final IOException ignored ) {
+               }
+            } );
+         }
       }
    }
 
@@ -130,5 +168,82 @@ class PackageServiceTest {
       packageService.backupWorkspace();
 
       assertTrue( Arrays.stream( Objects.requireNonNull( RESOURCE_PATH.toFile().list() ) ).anyMatch( file -> file.contains( "backup-" ) ) );
+   }
+
+   @Test
+   void testPreviewAasImportListsSubmodelTemplates() throws IOException {
+      final CompletedFileUpload aasx = aasxUpload( aasAspectModelFile() );
+
+      final List<AasImportCandidate> candidates = packageService.previewAasImport( aasx, null );
+
+      assertEquals( List.of(
+            new AasImportCandidate( "urn:samm:org.eclipse.esmf.aas:1.0.0#ImportedAspect", AAS_NAMESPACE, VERSION, "ImportedAspect.ttl",
+                  false ) ), candidates );
+   }
+
+   @Test
+   void testPreviewAasImportMarksExistingModels() throws IOException {
+      final CompletedFileUpload aasx = aasxUpload( RESOURCE_PATH.resolve( Path.of( "org.eclipse.esmf.example", VERSION, "Movement.ttl" ) ) );
+
+      final List<AasImportCandidate> candidates = packageService.previewAasImport( aasx, null );
+
+      assertEquals( 1, candidates.size() );
+      assertEquals( "Movement.ttl", candidates.getFirst().fileName() );
+      assertTrue( candidates.getFirst().alreadyExists() );
+   }
+
+   @Test
+   void testImportAasWritesAspectModelIntoWorkspace() throws IOException {
+      final CompletedFileUpload aasx = aasxUpload( aasAspectModelFile() );
+
+      final Map<String, List<Version>> imported = packageService.importAas( aasx, null );
+
+      final Path importedFile = RESOURCE_PATH.resolve( Path.of( AAS_NAMESPACE, VERSION, "ImportedAspect.ttl" ) );
+      assertTrue( Files.exists( importedFile ) );
+      assertTrue( Files.readString( importedFile ).contains( ":ImportedAspect a samm:Aspect" ) );
+      assertTrue( imported.containsKey( AAS_NAMESPACE ) );
+      assertDoesNotThrow( () -> new AspectModelLoader().load( importedFile.toFile() ) );
+   }
+
+   @Test
+   void testImportAasDoesNotOverwriteExistingModels() throws IOException {
+      final Path movement = RESOURCE_PATH.resolve( Path.of( "org.eclipse.esmf.example", VERSION, "Movement.ttl" ) );
+      final String original = Files.readString( movement );
+      final CompletedFileUpload aasx = aasxUpload( movement );
+
+      final CreateFileException exception = assertThrows( CreateFileException.class, () -> packageService.importAas( aasx, null ) );
+
+      assertTrue( exception.getMessage().contains( "Movement.ttl" ) );
+      assertEquals( original, Files.readString( movement ) );
+   }
+
+   @Test
+   void testImportAasRejectsUnsupportedFileType() {
+      final CompletedFileUpload upload = MockFileUpload.create( "model.ttl", new byte[0], MediaType.MULTIPART_FORM_DATA_TYPE );
+
+      assertThrows( FileReadException.class, () -> packageService.previewAasImport( upload, null ) );
+   }
+
+   @Test
+   void testImportAasRejectsInvalidContent() {
+      final CompletedFileUpload upload = MockFileUpload.create( "broken.json", "{ not json".getBytes(),
+            MediaType.MULTIPART_FORM_DATA_TYPE );
+
+      assertThrows( InvalidAspectModelException.class, () -> packageService.importAas( upload, null ) );
+   }
+
+   private Path aasAspectModelFile() throws IOException {
+      final Path directory = tempDir.resolve( Path.of( AAS_NAMESPACE, VERSION ) );
+      Files.createDirectories( directory );
+      final Path file = directory.resolve( "ImportedAspect.ttl" );
+      Files.writeString( file, AAS_ASPECT_MODEL );
+      return file;
+   }
+
+   private static CompletedFileUpload aasxUpload( final Path aspectModelFile ) {
+      final AspectModelAasGenerator generator = new AspectModelAasGenerator(
+            new AspectModelLoader().load( aspectModelFile.toFile() ).aspect(),
+            AasGenerationConfigBuilder.builder().format( AasFileFormat.AASX ).build() );
+      return MockFileUpload.create( "model.aasx", generator.getContent(), MediaType.MULTIPART_FORM_DATA_TYPE );
    }
 }

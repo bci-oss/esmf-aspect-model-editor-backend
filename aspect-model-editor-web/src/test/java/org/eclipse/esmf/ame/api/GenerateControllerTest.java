@@ -30,9 +30,13 @@ import java.util.Optional;
 import org.eclipse.esmf.ame.exceptions.GenerationException;
 import org.eclipse.esmf.ame.exceptions.UriNotDefinedException;
 import org.eclipse.esmf.ame.model.MockFileUpload;
+import org.eclipse.esmf.ame.MediaTypeExtension;
 import org.eclipse.esmf.ame.services.GenerateService;
+import org.eclipse.esmf.aspectmodel.generator.diagram.DiagramGenerationConfig;
 import org.eclipse.esmf.aspectmodel.generator.openapi.PagingOption;
+import org.eclipse.esmf.aspectmodel.generator.sql.SqlGenerationConfig;
 
+import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MediaType;
@@ -216,5 +220,97 @@ class GenerateControllerTest {
       assertEquals( MediaType.APPLICATION_ZIP, response.getContentType().map( MediaType::getName ).orElse( null ) );
       assertNotNull( response.getHeaders().get( "Content-Disposition" ) );
    }
-}
 
+   @Test
+   void testGenerateSvgDiagramSuccess() {
+      final CompletedFileUpload upload = MockFileUpload.create( "model.ttl" );
+      final byte[] svg = "<svg/>".getBytes( StandardCharsets.UTF_8 );
+      when( generateService.generateDiagram( eq( upload ), any( URI.class ), eq( "en" ), eq( DiagramGenerationConfig.Format.SVG ) ) )
+            .thenReturn( svg );
+
+      final HttpResponse<byte[]> response = controller.generateDiagram( Optional.of( VALID_URI ), upload, "en",
+            DiagramGenerationConfig.Format.SVG );
+
+      assertEquals( HttpStatus.OK, response.getStatus() );
+      assertArrayEquals( svg, response.body() );
+      assertEquals( MediaTypeExtension.IMAGE_SVG_VALUE, response.getContentType().map( MediaType::toString ).orElseThrow() );
+   }
+
+   @Test
+   void testGeneratePngDiagramSetsPngContentType() {
+      final CompletedFileUpload upload = MockFileUpload.create( "model.ttl" );
+      when( generateService.generateDiagram( eq( upload ), any( URI.class ), eq( "en" ), eq( DiagramGenerationConfig.Format.PNG ) ) )
+            .thenReturn( new byte[] { 1 } );
+
+      final HttpResponse<byte[]> response = controller.generateDiagram( Optional.of( VALID_URI ), upload, "en",
+            DiagramGenerationConfig.Format.PNG );
+
+      assertEquals( MediaType.IMAGE_PNG, response.getContentType().map( MediaType::toString ).orElseThrow() );
+   }
+
+   @Test
+   void testGenerateDiagramMissingUriThrowsUriNotDefinedException() {
+      final CompletedFileUpload upload = MockFileUpload.create( "model.ttl" );
+
+      assertThrows( UriNotDefinedException.class,
+            () -> controller.generateDiagram( Optional.empty(), upload, "en", DiagramGenerationConfig.Format.SVG ) );
+   }
+
+   @Test
+   void testGenerateSqlSuccess() {
+      final CompletedFileUpload upload = MockFileUpload.create( "model.ttl" );
+      when( generateService.generateSql( eq( upload ), any( URI.class ), eq( "en" ), eq( SqlGenerationConfig.Dialect.POSTGRESQL ) ) )
+            .thenReturn( "CREATE TABLE movement" );
+
+      final HttpResponse<String> response = controller.generateSql( Optional.of( VALID_URI ), upload, "en",
+            SqlGenerationConfig.Dialect.POSTGRESQL );
+
+      assertEquals( HttpStatus.OK, response.getStatus() );
+      assertEquals( "CREATE TABLE movement", response.body() );
+   }
+
+   @Test
+   void testGenerateJsonLdSuccess() {
+      final CompletedFileUpload upload = MockFileUpload.create( "model.ttl" );
+      when( generateService.generateJsonLd( eq( upload ), any( URI.class ) ) ).thenReturn( "{\"@context\":{}}" );
+
+      final HttpResponse<String> response = controller.generateJsonLd( Optional.of( VALID_URI ), upload );
+
+      assertEquals( HttpStatus.OK, response.getStatus() );
+      assertEquals( "{\"@context\":{}}", response.body() );
+   }
+
+   @Test
+   void testGenerateJavaClassesSuccess() {
+      final CompletedFileUpload upload = MockFileUpload.create( "model.ttl" );
+      final byte[] zip = { 0x50, 0x4B, 0x03, 0x04 };
+      when( generateService.generateJavaClasses( eq( upload ), any( URI.class ), eq( "com.example" ), eq( true ), eq( false ) ) )
+            .thenReturn( zip );
+
+      final HttpResponse<byte[]> response = controller.generateJavaClasses( Optional.of( VALID_URI ), upload, "com.example", true, false );
+
+      assertEquals( HttpStatus.OK, response.getStatus() );
+      assertArrayEquals( zip, response.body() );
+      assertEquals( MediaType.APPLICATION_ZIP, response.getContentType().map( MediaType::getName ).orElse( null ) );
+      assertTrue( response.getHeaders().get( HttpHeaders.CONTENT_DISPOSITION ).contains( "java-classes.zip" ) );
+   }
+
+   @Test
+   void testGenerateParquetPayloadSuccess() {
+      final CompletedFileUpload upload = MockFileUpload.create( "model.ttl" );
+      final byte[] parquet = "PAR1PAR1".getBytes( StandardCharsets.US_ASCII );
+      when( generateService.generateParquetPayload( eq( upload ), any( URI.class ) ) ).thenReturn( parquet );
+
+      final HttpResponse<byte[]> response = controller.generateParquetPayload( Optional.of( VALID_URI ), upload );
+
+      assertEquals( HttpStatus.OK, response.getStatus() );
+      assertArrayEquals( parquet, response.body() );
+   }
+
+   @Test
+   void testGenerateParquetPayloadWithoutUriFails() {
+      final CompletedFileUpload upload = MockFileUpload.create( "model.ttl" );
+
+      assertThrows( UriNotDefinedException.class, () -> controller.generateParquetPayload( Optional.empty(), upload ) );
+   }
+}

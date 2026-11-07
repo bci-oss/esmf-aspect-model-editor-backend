@@ -38,6 +38,9 @@ public class ViolationError {
    @JsonProperty( "fix" )
    private List<String> fix = new ArrayList<>();
    @JsonInclude( JsonInclude.Include.NON_NULL )
+   @JsonProperty( "quickFixes" )
+   private List<QuickFix> quickFixes = new ArrayList<>();
+   @JsonInclude( JsonInclude.Include.NON_NULL )
    @JsonProperty( "errorCode" )
    private String errorCode;
 
@@ -81,6 +84,23 @@ public class ViolationError {
 
    public void addFix( final String fix ) {
       this.fix.add( fix );
+   }
+
+   /**
+    * The fixes a client can apply automatically, in addition to the {@link #getFix() hints}.
+    *
+    * @return the quick fixes, empty if there are none
+    */
+   public List<QuickFix> getQuickFixes() {
+      return quickFixes;
+   }
+
+   public void setQuickFixes( final List<QuickFix> quickFixes ) {
+      this.quickFixes = quickFixes != null ? quickFixes : new ArrayList<>();
+   }
+
+   public void addQuickFix( final QuickFix quickFix ) {
+      this.quickFixes.add( quickFix );
    }
 
    public String getErrorCode() {

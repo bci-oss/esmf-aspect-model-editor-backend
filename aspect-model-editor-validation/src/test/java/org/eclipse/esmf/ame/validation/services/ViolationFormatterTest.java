@@ -26,10 +26,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.XSD;
 import org.eclipse.esmf.ame.exceptions.UrnNotFoundException;
+import org.eclipse.esmf.ame.validation.model.QuickFix;
 import org.eclipse.esmf.ame.validation.model.ViolationError;
 import org.eclipse.esmf.aspectmodel.DocumentViolation;
 import org.eclipse.esmf.aspectmodel.UnsupportedVersionException;
@@ -38,6 +42,7 @@ import org.eclipse.esmf.aspectmodel.ViolationCode;
 import org.eclipse.esmf.aspectmodel.ViolationReport;
 import org.eclipse.esmf.aspectmodel.resolver.exceptions.ParserException;
 import org.eclipse.esmf.aspectmodel.shacl.fix.Fix;
+import org.eclipse.esmf.aspectmodel.shacl.fix.ReplaceValue;
 import org.eclipse.esmf.aspectmodel.shacl.violation.EvaluationContext;
 import org.eclipse.esmf.aspectmodel.shacl.violation.ShaclViolation;
 import org.eclipse.esmf.aspectmodel.shacl.violation.SparqlConstraintViolation;
@@ -146,6 +151,7 @@ class ViolationFormatterTest {
    void testVisitShaclViolationWithFixes() {
       final Fix fix = mock( Fix.class );
       when( fix.description() ).thenReturn( "Use valid type" );
+      when( fix.accept( any() ) ).thenReturn( Optional.empty() );
 
       final ShaclViolation violation = mock( ShaclViolation.class );
       when( violation.message() ).thenReturn( "Constraint violation" );
@@ -158,6 +164,48 @@ class ViolationFormatterTest {
       assertNotNull( error );
       assertFalse( error.getFix().isEmpty() );
       assertTrue( error.getFix().getFirst().contains( "Use valid type" ) );
+      assertTrue( error.getQuickFixes().isEmpty() );
+   }
+
+   @Test
+   void testVisitShaclViolationWithReplaceValueFixProvidesQuickFix() {
+      final Resource element = ResourceFactory.createResource( "urn:samm:org.eclipse.esmf.example:1.0.0#speed" );
+      final Property preferredName = ResourceFactory.createProperty( "urn:samm:org.eclipse.esmf.samm:meta-model:2.2.0#preferredName" );
+      final EvaluationContext context = mock( EvaluationContext.class );
+      when( context.element() ).thenReturn( element );
+      when( context.property() ).thenReturn( Optional.of( preferredName ) );
+      final ReplaceValue fix = new ReplaceValue( context, ResourceFactory.createTypedLiteral( "Speed" ),
+            ResourceFactory.createLangLiteral( "Speed", "en" ), Optional.of( "Add the language tag 'en'" ) );
+
+      final ShaclViolation violation = mock( ShaclViolation.class );
+      when( violation.message() ).thenReturn( "Wrong datatype" );
+      when( violation.fixes() ).thenReturn( List.of( fix ) );
+      when( violation.sourceLocation() ).thenReturn( Optional.empty() );
+
+      final ViolationError error = formatter.visit( violation );
+
+      assertEquals( List.of( new QuickFix( "Add the language tag 'en'", element.getURI(), preferredName.getURI(),
+            new QuickFix.LiteralValue( "Speed", XSD.xstring.getURI(), "" ),
+            new QuickFix.LiteralValue( "Speed", RDF.langString.getURI(), "en" ) ) ), error.getQuickFixes() );
+   }
+
+   @Test
+   void testQuickFixesNeedANamedElementAndAProperty() {
+      final EvaluationContext context = mock( EvaluationContext.class );
+      when( context.element() ).thenReturn( ResourceFactory.createResource() );
+      when( context.property() ).thenReturn( Optional.empty() );
+      final ReplaceValue fix = new ReplaceValue( context, ResourceFactory.createTypedLiteral( "Speed" ),
+            ResourceFactory.createLangLiteral( "Speed", "en" ), Optional.empty() );
+
+      final ShaclViolation violation = mock( ShaclViolation.class );
+      when( violation.message() ).thenReturn( "Wrong datatype" );
+      when( violation.fixes() ).thenReturn( List.of( fix ) );
+      when( violation.sourceLocation() ).thenReturn( Optional.empty() );
+
+      final ViolationError error = formatter.visit( violation );
+
+      assertEquals( 1, error.getFix().size() );
+      assertTrue( error.getQuickFixes().isEmpty() );
    }
 
    @Test

@@ -1,0 +1,564 @@
+{
+  "assetAdministrationShells" : [ {
+    "modelType" : "AssetAdministrationShell",
+    "assetInformation" : {
+      "assetKind" : "Type",
+      "globalAssetId" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#Movement"
+    },
+    "submodels" : [ {
+      "keys" : [ {
+        "type" : "Submodel",
+        "value" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#Movement/submodel"
+      } ],
+      "type" : "ModelReference"
+    } ],
+    "administration" : { },
+    "id" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#Movement",
+    "description" : [ {
+      "language" : "en",
+      "text" : "defaultAdminShell"
+    } ],
+    "idShort" : "defaultAdminShell"
+  } ],
+  "conceptDescriptions" : [ {
+    "modelType" : "ConceptDescription",
+    "embeddedDataSpecifications" : [ {
+      "dataSpecification" : {
+        "keys" : [ {
+          "type" : "GlobalReference",
+          "value" : "https://admin-shell.io/DataSpecificationTemplates/DataSpecificationIec61360/3"
+        } ],
+        "type" : "ExternalReference"
+      },
+      "dataSpecificationContent" : {
+        "modelType" : "DataSpecificationIec61360",
+        "definition" : [ {
+          "language" : "en",
+          "text" : "Aspect for movement information"
+        } ],
+        "preferredName" : [ {
+          "language" : "en",
+          "text" : "movement"
+        } ]
+      }
+    } ],
+    "id" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#Movement",
+    "category" : "APPLICATION_CLASS",
+    "description" : [ {
+      "language" : "en",
+      "text" : "Aspect for movement information"
+    } ],
+    "displayName" : [ {
+      "language" : "en",
+      "text" : "movement"
+    } ],
+    "idShort" : "Movement"
+  }, {
+    "modelType" : "ConceptDescription",
+    "embeddedDataSpecifications" : [ {
+      "dataSpecification" : {
+        "keys" : [ {
+          "type" : "GlobalReference",
+          "value" : "https://admin-shell.io/DataSpecificationTemplates/DataSpecificationIec61360/3"
+        } ],
+        "type" : "ExternalReference"
+      },
+      "dataSpecificationContent" : {
+        "modelType" : "DataSpecificationIec61360",
+        "dataType" : "BOOLEAN",
+        "definition" : [ {
+          "language" : "en",
+          "text" : "Flag indicating whether the asset is currently moving"
+        } ],
+        "preferredName" : [ {
+          "language" : "en",
+          "text" : "is moving"
+        } ]
+      }
+    } ],
+    "id" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#isMoving",
+    "displayName" : [ {
+      "language" : "en",
+      "text" : "is moving"
+    } ],
+    "idShort" : "isMoving"
+  }, {
+    "modelType" : "ConceptDescription",
+    "embeddedDataSpecifications" : [ {
+      "dataSpecification" : {
+        "keys" : [ {
+          "type" : "GlobalReference",
+          "value" : "https://admin-shell.io/DataSpecificationTemplates/DataSpecificationIec61360/3"
+        } ],
+        "type" : "ExternalReference"
+      },
+      "dataSpecificationContent" : {
+        "modelType" : "DataSpecificationIec61360",
+        "dataType" : "INTEGER_MEASURE",
+        "definition" : [ {
+          "language" : "en",
+          "text" : "latitude coordinate in space (WGS84)"
+        } ],
+        "preferredName" : [ {
+          "language" : "en",
+          "text" : "latitude"
+        } ],
+        "unit" : "degreeUnitOfAngle"
+      }
+    } ],
+    "id" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#latitude",
+    "displayName" : [ {
+      "language" : "en",
+      "text" : "latitude"
+    } ],
+    "idShort" : "latitude"
+  }, {
+    "modelType" : "ConceptDescription",
+    "embeddedDataSpecifications" : [ {
+      "dataSpecification" : {
+        "keys" : [ {
+          "type" : "GlobalReference",
+          "value" : "https://admin-shell.io/DataSpecificationTemplates/DataSpecificationIec61360/3"
+        } ],
+        "type" : "ExternalReference"
+      },
+      "dataSpecificationContent" : {
+        "modelType" : "DataSpecificationIec61360",
+        "dataType" : "INTEGER_MEASURE",
+        "definition" : [ {
+          "language" : "en",
+          "text" : "longitude coordinate in space (WGS84)"
+        } ],
+        "preferredName" : [ {
+          "language" : "en",
+          "text" : "longitude"
+        } ],
+        "unit" : "degreeUnitOfAngle"
+      }
+    } ],
+    "id" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#longitude",
+    "displayName" : [ {
+      "language" : "en",
+      "text" : "longitude"
+    } ],
+    "idShort" : "longitude"
+  }, {
+    "modelType" : "ConceptDescription",
+    "embeddedDataSpecifications" : [ {
+      "dataSpecification" : {
+        "keys" : [ {
+          "type" : "GlobalReference",
+          "value" : "https://admin-shell.io/DataSpecificationTemplates/DataSpecificationIec61360/3"
+        } ],
+        "type" : "ExternalReference"
+      },
+      "dataSpecificationContent" : {
+        "modelType" : "DataSpecificationIec61360",
+        "dataType" : "REAL_MEASURE",
+        "definition" : [ {
+          "language" : "en",
+          "text" : "Elevation above sea level zero"
+        } ],
+        "preferredName" : [ {
+          "language" : "en",
+          "text" : "altitude"
+        } ],
+        "unit" : "metre"
+      }
+    } ],
+    "id" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#altitude",
+    "displayName" : [ {
+      "language" : "en",
+      "text" : "altitude"
+    } ],
+    "idShort" : "altitude"
+  }, {
+    "modelType" : "ConceptDescription",
+    "embeddedDataSpecifications" : [ {
+      "dataSpecification" : {
+        "keys" : [ {
+          "type" : "GlobalReference",
+          "value" : "https://admin-shell.io/DataSpecificationTemplates/DataSpecificationIec61360/3"
+        } ],
+        "type" : "ExternalReference"
+      },
+      "dataSpecificationContent" : {
+        "modelType" : "DataSpecificationIec61360",
+        "dataType" : "STRING",
+        "definition" : [ {
+          "language" : "en",
+          "text" : "Indicates a position"
+        } ],
+        "preferredName" : [ {
+          "language" : "en",
+          "text" : "position"
+        } ]
+      }
+    } ],
+    "id" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#position",
+    "displayName" : [ {
+      "language" : "en",
+      "text" : "position"
+    } ],
+    "idShort" : "position"
+  }, {
+    "modelType" : "ConceptDescription",
+    "embeddedDataSpecifications" : [ {
+      "dataSpecification" : {
+        "keys" : [ {
+          "type" : "GlobalReference",
+          "value" : "https://admin-shell.io/DataSpecificationTemplates/DataSpecificationIec61360/3"
+        } ],
+        "type" : "ExternalReference"
+      },
+      "dataSpecificationContent" : {
+        "modelType" : "DataSpecificationIec61360",
+        "dataType" : "REAL_MEASURE",
+        "definition" : [ {
+          "language" : "en",
+          "text" : "speed of vehicle"
+        } ],
+        "preferredName" : [ {
+          "language" : "en",
+          "text" : "speed"
+        } ],
+        "unit" : "kilometrePerHour"
+      }
+    } ],
+    "id" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#speed",
+    "displayName" : [ {
+      "language" : "en",
+      "text" : "speed"
+    } ],
+    "idShort" : "speed"
+  }, {
+    "modelType" : "ConceptDescription",
+    "embeddedDataSpecifications" : [ {
+      "dataSpecification" : {
+        "keys" : [ {
+          "type" : "GlobalReference",
+          "value" : "https://admin-shell.io/DataSpecificationTemplates/DataSpecificationIec61360/3"
+        } ],
+        "type" : "ExternalReference"
+      },
+      "dataSpecificationContent" : {
+        "modelType" : "DataSpecificationIec61360",
+        "dataType" : "STRING",
+        "definition" : [ {
+          "language" : "en",
+          "text" : "Indicates if the speed limit is adhered to."
+        } ],
+        "preferredName" : [ {
+          "language" : "en",
+          "text" : "speed limit warning"
+        } ],
+        "valueList" : {
+          "valueReferencePairs" : [ {
+            "value" : "green",
+            "valueId" : {
+              "keys" : [ {
+                "type" : "ConceptDescription",
+                "value" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#TrafficLight:_greenba4788b2"
+              } ],
+              "type" : "ModelReference"
+            }
+          }, {
+            "value" : "yellow",
+            "valueId" : {
+              "keys" : [ {
+                "type" : "ConceptDescription",
+                "value" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#TrafficLight:_yellowc685a2c9"
+              } ],
+              "type" : "ModelReference"
+            }
+          }, {
+            "value" : "red",
+            "valueId" : {
+              "keys" : [ {
+                "type" : "ConceptDescription",
+                "value" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#TrafficLight:_redb1f51a51"
+              } ],
+              "type" : "ModelReference"
+            }
+          } ]
+        }
+      }
+    } ],
+    "id" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#speedLimitWarning",
+    "displayName" : [ {
+      "language" : "en",
+      "text" : "speed limit warning"
+    } ],
+    "idShort" : "speedLimitWarning"
+  } ],
+  "submodels" : [ {
+    "modelType" : "Submodel",
+    "kind" : "Template",
+    "semanticId" : {
+      "keys" : [ {
+        "type" : "GlobalReference",
+        "value" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#Movement"
+      } ],
+      "type" : "ExternalReference"
+    },
+    "administration" : { },
+    "id" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#Movement/submodel",
+    "description" : [ {
+      "language" : "en",
+      "text" : "Aspect for movement information"
+    } ],
+    "idShort" : "Movement",
+    "submodelElements" : [ {
+      "modelType" : "Property",
+      "semanticId" : {
+        "keys" : [ {
+          "type" : "GlobalReference",
+          "value" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#isMoving"
+        } ],
+        "type" : "ExternalReference"
+      },
+      "valueType" : "xs:boolean",
+      "qualifiers" : [ {
+        "semanticId" : {
+          "keys" : [ {
+            "type" : "GlobalReference",
+            "value" : "https://admin-shell.io/SubmodelTemplates/Cardinality/1/0"
+          } ],
+          "type" : "ExternalReference"
+        },
+        "kind" : "TemplateQualifier",
+        "type" : "SMT/Cardinality",
+        "value" : "One",
+        "valueType" : "xs:string"
+      } ],
+      "displayName" : [ {
+        "language" : "en",
+        "text" : "is moving"
+      } ],
+      "idShort" : "isMoving"
+    }, {
+      "modelType" : "SubmodelElementCollection",
+      "semanticId" : {
+        "keys" : [ {
+          "type" : "GlobalReference",
+          "value" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#SpatialPosition"
+        } ],
+        "type" : "ExternalReference"
+      },
+      "supplementalSemanticIds" : [ {
+        "keys" : [ {
+          "type" : "GlobalReference",
+          "value" : "https://www.w3.org/2003/01/geo/"
+        } ],
+        "type" : "ExternalReference"
+      } ],
+      "qualifiers" : [ {
+        "semanticId" : {
+          "keys" : [ {
+            "type" : "GlobalReference",
+            "value" : "https://admin-shell.io/SubmodelTemplates/Cardinality/1/0"
+          } ],
+          "type" : "ExternalReference"
+        },
+        "kind" : "TemplateQualifier",
+        "type" : "SMT/Cardinality",
+        "value" : "One",
+        "valueType" : "xs:string"
+      }, {
+        "kind" : "TemplateQualifier",
+        "type" : "SMT/ExampleValue",
+        "value" : "153.0",
+        "valueType" : "xs:string"
+      } ],
+      "description" : [ {
+        "language" : "en",
+        "text" : "Indicates a position"
+      } ],
+      "displayName" : [ {
+        "language" : "en",
+        "text" : "position"
+      } ],
+      "idShort" : "position",
+      "value" : [ {
+        "modelType" : "Property",
+        "semanticId" : {
+          "keys" : [ {
+            "type" : "GlobalReference",
+            "value" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#latitude"
+          } ],
+          "type" : "ExternalReference"
+        },
+        "supplementalSemanticIds" : [ {
+          "keys" : [ {
+            "type" : "GlobalReference",
+            "value" : "http://www.w3.org/2003/01/geo/wgs84_pos#lat"
+          } ],
+          "type" : "ExternalReference"
+        } ],
+        "value" : "9.1781",
+        "valueType" : "xs:decimal",
+        "qualifiers" : [ {
+          "semanticId" : {
+            "keys" : [ {
+              "type" : "GlobalReference",
+              "value" : "https://admin-shell.io/SubmodelTemplates/Cardinality/1/0"
+            } ],
+            "type" : "ExternalReference"
+          },
+          "kind" : "TemplateQualifier",
+          "type" : "SMT/Cardinality",
+          "value" : "One",
+          "valueType" : "xs:string"
+        }, {
+          "kind" : "TemplateQualifier",
+          "type" : "SMT/ExampleValue",
+          "value" : "9.1781",
+          "valueType" : "xs:string"
+        } ],
+        "displayName" : [ {
+          "language" : "en",
+          "text" : "latitude"
+        } ],
+        "idShort" : "latitude"
+      }, {
+        "modelType" : "Property",
+        "semanticId" : {
+          "keys" : [ {
+            "type" : "GlobalReference",
+            "value" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#longitude"
+          } ],
+          "type" : "ExternalReference"
+        },
+        "supplementalSemanticIds" : [ {
+          "keys" : [ {
+            "type" : "GlobalReference",
+            "value" : "http://www.w3.org/2003/01/geo/wgs84_pos#long"
+          } ],
+          "type" : "ExternalReference"
+        } ],
+        "value" : "48.80835",
+        "valueType" : "xs:decimal",
+        "qualifiers" : [ {
+          "semanticId" : {
+            "keys" : [ {
+              "type" : "GlobalReference",
+              "value" : "https://admin-shell.io/SubmodelTemplates/Cardinality/1/0"
+            } ],
+            "type" : "ExternalReference"
+          },
+          "kind" : "TemplateQualifier",
+          "type" : "SMT/Cardinality",
+          "value" : "One",
+          "valueType" : "xs:string"
+        }, {
+          "kind" : "TemplateQualifier",
+          "type" : "SMT/ExampleValue",
+          "value" : "48.80835",
+          "valueType" : "xs:string"
+        } ],
+        "displayName" : [ {
+          "language" : "en",
+          "text" : "longitude"
+        } ],
+        "idShort" : "longitude"
+      }, {
+        "modelType" : "Property",
+        "semanticId" : {
+          "keys" : [ {
+            "type" : "GlobalReference",
+            "value" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#altitude"
+          } ],
+          "type" : "ExternalReference"
+        },
+        "supplementalSemanticIds" : [ {
+          "keys" : [ {
+            "type" : "GlobalReference",
+            "value" : "http://www.w3.org/2003/01/geo/wgs84_pos#alt"
+          } ],
+          "type" : "ExternalReference"
+        } ],
+        "value" : "153.0",
+        "valueType" : "xs:float",
+        "qualifiers" : [ {
+          "semanticId" : {
+            "keys" : [ {
+              "type" : "GlobalReference",
+              "value" : "https://admin-shell.io/SubmodelTemplates/Cardinality/1/0"
+            } ],
+            "type" : "ExternalReference"
+          },
+          "kind" : "TemplateQualifier",
+          "type" : "SMT/Cardinality",
+          "value" : "ZeroToOne",
+          "valueType" : "xs:string"
+        }, {
+          "kind" : "TemplateQualifier",
+          "type" : "SMT/ExampleValue",
+          "value" : "153.0",
+          "valueType" : "xs:string"
+        } ],
+        "displayName" : [ {
+          "language" : "en",
+          "text" : "altitude"
+        } ],
+        "idShort" : "altitude"
+      } ]
+    }, {
+      "modelType" : "Property",
+      "semanticId" : {
+        "keys" : [ {
+          "type" : "GlobalReference",
+          "value" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#speed"
+        } ],
+        "type" : "ExternalReference"
+      },
+      "valueType" : "xs:float",
+      "qualifiers" : [ {
+        "semanticId" : {
+          "keys" : [ {
+            "type" : "GlobalReference",
+            "value" : "https://admin-shell.io/SubmodelTemplates/Cardinality/1/0"
+          } ],
+          "type" : "ExternalReference"
+        },
+        "kind" : "TemplateQualifier",
+        "type" : "SMT/Cardinality",
+        "value" : "One",
+        "valueType" : "xs:string"
+      } ],
+      "displayName" : [ {
+        "language" : "en",
+        "text" : "speed"
+      } ],
+      "idShort" : "speed"
+    }, {
+      "modelType" : "Property",
+      "semanticId" : {
+        "keys" : [ {
+          "type" : "GlobalReference",
+          "value" : "urn:samm:org.eclipse.esmf.aasimport:1.0.0#speedLimitWarning"
+        } ],
+        "type" : "ExternalReference"
+      },
+      "valueType" : "xs:string",
+      "qualifiers" : [ {
+        "semanticId" : {
+          "keys" : [ {
+            "type" : "GlobalReference",
+            "value" : "https://admin-shell.io/SubmodelTemplates/Cardinality/1/0"
+          } ],
+          "type" : "ExternalReference"
+        },
+        "kind" : "TemplateQualifier",
+        "type" : "SMT/Cardinality",
+        "value" : "One",
+        "valueType" : "xs:string"
+      } ],
+      "displayName" : [ {
+        "language" : "en",
+        "text" : "speed limit warning"
+      } ],
+      "idShort" : "speedLimitWarning"
+    } ]
+  } ]
+}

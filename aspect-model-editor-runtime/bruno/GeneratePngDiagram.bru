@@ -1,0 +1,29 @@
+meta {
+  name: GeneratePngDiagram
+  type: http
+  seq: 112
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/generate/diagram?language=en&format=PNG
+  body: multipartForm
+  auth: none
+}
+
+headers {
+  uri: blob://movement.ttl
+}
+
+body:multipart-form {
+  aspectModel: @file(./TestingFiles/Movement.ttl)
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Content type is image/png", function() {
+    expect(res.getHeader("content-type")).to.include("image/png");
+  });
+}

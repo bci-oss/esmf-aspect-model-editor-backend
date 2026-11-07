@@ -1,0 +1,21 @@
+meta {
+  name: GetElementUsage_UnknownElement
+  type: http
+  seq: 109
+}
+
+get {
+  url: http://localhost:{{port}}/ame/api/models/usage
+  body: none
+  auth: none
+}
+
+headers {
+  aspect-model-urn: urn:samm:org.eclipse.bruno.refactoring:1.0.0#unknownProperty
+}
+
+tests {
+  test("Status code is 404", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+}

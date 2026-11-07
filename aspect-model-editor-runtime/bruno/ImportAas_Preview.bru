@@ -1,0 +1,29 @@
+meta {
+  name: ImportAas_Preview
+  type: http
+  seq: 116
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/package/import-aas/preview
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  aasFile: @file(./TestingFiles/MovementAas.json)
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Preview lists the Movement aspect as a new model", function() {
+    const candidates = res.getBody();
+    expect(candidates).to.be.an("array").with.lengthOf(1);
+    expect(candidates[0].urn).to.equal("urn:samm:org.eclipse.esmf.aasimport:1.0.0#Movement");
+    expect(candidates[0].fileName).to.equal("Movement.ttl");
+    expect(candidates[0].alreadyExists).to.equal(false);
+  });
+}

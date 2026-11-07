@@ -32,6 +32,7 @@ import org.eclipse.esmf.ame.exceptions.FileReadException;
 import org.eclipse.esmf.ame.model.MockFileUpload;
 import org.eclipse.esmf.ame.security.FileNameSanitizer;
 import org.eclipse.esmf.ame.services.PackageService;
+import org.eclipse.esmf.ame.services.models.AasImportCandidate;
 import org.eclipse.esmf.ame.services.models.Version;
 
 import io.micronaut.http.HttpResponse;
@@ -106,5 +107,30 @@ class PackageControllerTest {
       assertEquals( HttpStatus.CREATED, response.getStatus() );
       verify( packageService ).backupWorkspace( "/ws" );
    }
-}
 
+   @Test
+   void testPreviewAasImportSuccess() {
+      final CompletedFileUpload upload = MockFileUpload.create( "model.aasx" );
+      final List<AasImportCandidate> candidates = List.of(
+            new AasImportCandidate( VALID_URN, "org.eclipse.esmf.example", "1.0.0", "Movement.ttl", true ) );
+      when( packageService.previewAasImport( upload, "ws-1" ) ).thenReturn( candidates );
+
+      final HttpResponse<List<AasImportCandidate>> response = controller.previewAasImport( upload, Optional.of( "ws-1" ) );
+
+      assertEquals( HttpStatus.OK, response.getStatus() );
+      assertEquals( candidates, response.body() );
+   }
+
+   @Test
+   void testImportAasUsesDefaultWorkspaceWhenNoneGiven() {
+      final CompletedFileUpload upload = MockFileUpload.create( "model.aasx" );
+      final Map<String, List<Version>> imported = Map.of( "org.eclipse.esmf.example", List.of() );
+      when( packageService.importAas( upload, null ) ).thenReturn( imported );
+
+      final HttpResponse<Map<String, List<Version>>> response = controller.importAas( upload, Optional.empty() );
+
+      assertEquals( HttpStatus.OK, response.getStatus() );
+      assertEquals( imported, response.body() );
+      verify( packageService ).importAas( upload, null );
+   }
+}

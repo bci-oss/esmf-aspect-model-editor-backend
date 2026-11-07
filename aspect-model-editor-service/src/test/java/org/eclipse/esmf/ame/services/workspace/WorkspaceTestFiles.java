@@ -20,8 +20,8 @@ import java.nio.file.Path;
 /**
  * Writes small Turtle files into a temporary workspace.
  */
-final class WorkspaceTestFiles {
-   static final String PREFIXES = """
+public final class WorkspaceTestFiles {
+   public static final String PREFIXES = """
          @prefix samm: <urn:samm:org.eclipse.esmf.samm:meta-model:2.2.0#> .
          @prefix samm-c: <urn:samm:org.eclipse.esmf.samm:characteristic:2.2.0#> .
          @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -30,7 +30,7 @@ final class WorkspaceTestFiles {
    private WorkspaceTestFiles() {
    }
 
-   static Path write( final Path workspace, final String namespace, final String version, final String fileName, final String body ) {
+   public static Path write( final Path workspace, final String namespace, final String version, final String fileName, final String body ) {
       final Path file = workspace.resolve( namespace ).resolve( version ).resolve( fileName );
       try {
          Files.createDirectories( file.getParent() );
@@ -42,7 +42,7 @@ final class WorkspaceTestFiles {
    }
 
    /** A file in namespace A that defines a property and a characteristic. */
-   static Path providerA( final Path workspace ) {
+   public static Path providerA( final Path workspace ) {
       return write( workspace, "org.example.a", "1.0.0", "Provider.ttl", """
             @prefix : <urn:samm:org.example.a:1.0.0#> .
             :sharedProperty a samm:Property ; samm:characteristic :SharedCharacteristic .
@@ -51,7 +51,7 @@ final class WorkspaceTestFiles {
    }
 
    /** A file in namespace B that uses the property of namespace A. */
-   static Path consumerB( final Path workspace ) {
+   public static Path consumerB( final Path workspace ) {
       return write( workspace, "org.example.b", "1.0.0", "Consumer.ttl", """
             @prefix : <urn:samm:org.example.b:1.0.0#> .
             @prefix a: <urn:samm:org.example.a:1.0.0#> .

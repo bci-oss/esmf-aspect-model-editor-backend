@@ -1,0 +1,35 @@
+meta {
+  name: Refactoring_PreviewRename
+  type: http
+  seq: 100
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/refactoring/preview
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "type": "RENAME_ELEMENT",
+    "urn": "urn:samm:org.eclipse.bruno.refactoring:1.0.0#sharedProperty",
+    "newName": "renamedProperty"
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("The defining and the referencing file are modified", function() {
+    const body = res.getBody();
+    expect(body.description).to.equal("Rename sharedProperty to renamedProperty");
+    expect(body.modified.map(file => file.fileName).sort()).to.eql(["Consumer.ttl", "Provider.ttl"]);
+    expect(body.created).to.have.lengthOf(0);
+    expect(body.removed).to.have.lengthOf(0);
+    expect(body.blocked).to.have.lengthOf(0);
+    expect(body.applicable).to.equal(true);
+  });
+}

@@ -24,6 +24,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.eclipse.esmf.ame.exceptions.UrnNotFoundException;
+import org.eclipse.esmf.ame.validation.model.QuickFix;
 import org.eclipse.esmf.ame.validation.model.ViolationError;
 import org.eclipse.esmf.aspectmodel.AspectModelFile;
 import org.eclipse.esmf.aspectmodel.DocumentViolation;
@@ -35,6 +36,7 @@ import org.eclipse.esmf.aspectmodel.resolver.exceptions.ParserException;
 import org.eclipse.esmf.aspectmodel.resolver.parser.SmartToken;
 import org.eclipse.esmf.aspectmodel.resolver.parser.TokenRegistry;
 import org.eclipse.esmf.aspectmodel.shacl.fix.Fix;
+import org.eclipse.esmf.aspectmodel.shacl.fix.ReplaceValue;
 import org.eclipse.esmf.aspectmodel.shacl.violation.ClassTypeViolation;
 import org.eclipse.esmf.aspectmodel.shacl.violation.ClosedViolation;
 import org.eclipse.esmf.aspectmodel.shacl.violation.DatatypeViolation;
@@ -65,6 +67,7 @@ import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 import org.eclipse.esmf.aspectmodel.validation.InvalidSyntaxViolation;
 import org.eclipse.esmf.aspectmodel.validation.ProcessingViolation;
 
+import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 
@@ -158,6 +161,7 @@ public class ViolationFormatter
 
       for ( final Fix possibleFix : violation.fixes() ) {
          violationError.addFix( String.format( "%n  > Possible fix: %s", possibleFix.description() ) );
+         possibleFix.accept( QuickFixVisitor.INSTANCE ).ifPresent( violationError::addQuickFix );
       }
 
       return violationError;
@@ -392,5 +396,31 @@ public class ViolationFormatter
    public static Predicate<Violation> isProcessingViolation() {
       return violation -> violation.code() != null
             && violation.code().code().equals( ProcessingViolation.ERROR_CODE );
+   }
+
+   /**
+    * Translates the fixes of the ESMF SDK that a client can apply automatically into {@link QuickFix quick fixes}.
+    */
+   private static final class QuickFixVisitor implements Fix.Visitor<Optional<QuickFix>> {
+      private static final QuickFixVisitor INSTANCE = new QuickFixVisitor();
+
+      @Override
+      public Optional<QuickFix> visit( final Fix fix ) {
+         return Optional.empty();
+      }
+
+      @Override
+      public Optional<QuickFix> visitReplaceValue( final ReplaceValue fix ) {
+         final EvaluationContext context = fix.context();
+         if ( !context.element().isURIResource() || context.property().isEmpty() ) {
+            return Optional.empty();
+         }
+         return Optional.of( new QuickFix( fix.description(), context.element().getURI(), context.property().get().getURI(),
+               toLiteralValue( fix.oldValue() ), toLiteralValue( fix.newValue() ) ) );
+      }
+
+      private static QuickFix.LiteralValue toLiteralValue( final Literal literal ) {
+         return new QuickFix.LiteralValue( literal.getLexicalForm(), literal.getDatatypeURI(), literal.getLanguage() );
+      }
    }
 }

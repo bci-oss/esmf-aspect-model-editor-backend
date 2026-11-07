@@ -1,0 +1,35 @@
+meta {
+  name: Refactoring_ApplyRename
+  type: http
+  seq: 102
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/refactoring/apply
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "type": "RENAME_ELEMENT",
+    "urn": "urn:samm:org.eclipse.bruno.refactoring:1.0.0#sharedProperty",
+    "newName": "renamedProperty"
+  }
+}
+
+script:post-response {
+  bru.setVar("refactoringId", res.getBody().id);
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("The applied refactoring can be reverted by its id", function() {
+    const body = res.getBody();
+    expect(body.id).to.be.a("string");
+    expect(body.modified).to.have.lengthOf(2);
+  });
+}

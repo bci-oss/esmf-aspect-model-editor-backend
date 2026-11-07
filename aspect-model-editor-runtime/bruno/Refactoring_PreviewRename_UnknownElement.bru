@@ -1,0 +1,25 @@
+meta {
+  name: Refactoring_PreviewRename_UnknownElement
+  type: http
+  seq: 103
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/refactoring/preview
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "type": "RENAME_ELEMENT",
+    "urn": "urn:samm:org.eclipse.bruno.refactoring:1.0.0#sharedProperty",
+    "newName": "otherProperty"
+  }
+}
+
+tests {
+  test("Status code is 404 because the element was renamed", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+}

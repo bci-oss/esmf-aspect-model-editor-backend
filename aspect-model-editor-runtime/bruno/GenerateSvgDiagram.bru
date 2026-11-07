@@ -1,0 +1,34 @@
+meta {
+  name: GenerateSvgDiagram
+  type: http
+  seq: 111
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/generate/diagram?language=en&format=SVG
+  body: multipartForm
+  auth: none
+}
+
+headers {
+  uri: blob://movement.ttl
+}
+
+body:multipart-form {
+  aspectModel: @file(./TestingFiles/Movement.ttl)
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Content type is image/svg+xml", function() {
+    expect(res.getHeader("content-type")).to.include("image/svg+xml");
+  });
+
+  test("Diagram contains the Aspect", function() {
+    expect(res.getBody()).to.include("<svg");
+    expect(res.getBody()).to.include("Movement");
+  });
+}

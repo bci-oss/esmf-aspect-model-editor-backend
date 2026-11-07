@@ -41,6 +41,8 @@ import org.eclipse.esmf.ame.services.models.FileEntry;
 import org.eclipse.esmf.ame.services.models.FileInformation;
 import org.eclipse.esmf.ame.services.models.MigrationResult;
 import org.eclipse.esmf.ame.services.models.Version;
+import org.eclipse.esmf.ame.services.models.workspace.ElementUsageReport;
+import org.eclipse.esmf.ame.services.workspace.ElementUsageService;
 import org.eclipse.esmf.ame.services.workspace.WorkspaceCleanupService;
 import org.eclipse.esmf.ame.validation.model.ViolationReport;
 import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
@@ -73,6 +75,7 @@ public class ModelController {
    private final AspectModelMigrator aspectModelMigrator;
    private final FileNameSanitizer fileNameSanitizer;
    private final WorkspaceCleanupService workspaceCleanupService;
+   private final ElementUsageService elementUsageService;
 
    public ModelController(
          final ModelService modelService,
@@ -81,7 +84,8 @@ public class ModelController {
          final AspectModelValidationService validationService,
          final AspectModelMigrator aspectModelMigrator,
          final FileNameSanitizer fileNameSanitizer,
-         final WorkspaceCleanupService workspaceCleanupService ) {
+         final WorkspaceCleanupService workspaceCleanupService,
+         final ElementUsageService elementUsageService ) {
       this.modelService = modelService;
       this.aspectModelReader = aspectModelReader;
       this.aspectModelWriter = aspectModelWriter;
@@ -89,6 +93,7 @@ public class ModelController {
       this.aspectModelMigrator = aspectModelMigrator;
       this.fileNameSanitizer = fileNameSanitizer;
       this.workspaceCleanupService = workspaceCleanupService;
+      this.elementUsageService = elementUsageService;
    }
 
    private AspectModelUrn parseAspectModelUrn( final Optional<String> urn ) {
@@ -143,6 +148,19 @@ public class ModelController {
          @QueryValue() final String fileName ) {
       final AspectModelUrn aspectModelUrn = parseAspectModelUrn( urn );
       return HttpResponse.ok( aspectModelReader.checkElementExists( aspectModelUrn, fileName ) );
+   }
+
+   /**
+    * Finds the model elements of all sources that use the given element, e.g. to check whether renaming it only
+    * affects its own file.
+    *
+    * @param urn the Aspect Model URN header parameter in the format urn:samm:namespace:version#AspectModelElement
+    * @return the elements using it and the files that could not be checked
+    */
+   @Get( uri = "usage" )
+   @Produces( MediaType.APPLICATION_JSON )
+   public HttpResponse<ElementUsageReport> getUsage( @Header( ApplicationConstants.Headers.URN ) final Optional<String> urn ) {
+      return HttpResponse.ok( elementUsageService.findUsages( parseAspectModelUrn( urn ) ) );
    }
 
    private AspectModelResult getModelOrUnresolved( final AspectModelUrn aspectModelUrn ) {

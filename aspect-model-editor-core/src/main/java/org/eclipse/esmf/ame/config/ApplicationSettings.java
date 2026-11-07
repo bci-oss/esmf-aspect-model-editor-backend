@@ -39,6 +39,7 @@ public class ApplicationSettings {
    private static final String META_MODEL_PATH = ASPECT_MODEL_PATH + File.separator + ApplicationConstants.Directories.MODELS;
    private static final String WORKSPACE_CONFIG_FILE = "workspaces.json";
    private static final String WORKSPACE_CONFIG_PATH = ASPECT_MODEL_PATH + File.separator + WORKSPACE_CONFIG_FILE;
+   private static final String REFACTORING_HISTORY_PATH = ASPECT_MODEL_PATH + File.separator + "refactoring-history";
 
    private ApplicationSettings() {
    }
@@ -78,6 +79,25 @@ public class ApplicationSettings {
          throw new CreateFileException( String.format(
                "Unable to create the workspace configuration directory at: %s.",
                ASPECT_MODEL_PATH ), e );
+      }
+   }
+
+   /**
+    * Gets the directory the backups of applied refactorings are stored in, so that they can be reverted.
+    * Creates the directory if it doesn't exist.
+    *
+    * @return the path to the refactoring history directory
+    * @throws CreateFileException if the directory cannot be created
+    */
+   public static Path getRefactoringHistoryPath() {
+      try {
+         final Path historyPath = Path.of( REFACTORING_HISTORY_PATH );
+         FileUtils.forceMkdir( historyPath.toFile() );
+         return historyPath;
+      } catch ( final IOException e ) {
+         throw new CreateFileException( String.format(
+               "Unable to create the refactoring history directory at: %s.",
+               REFACTORING_HISTORY_PATH ), e );
       }
    }
 }

@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.eclipse.esmf.ame.constants.ApplicationConstants;
 import org.eclipse.esmf.ame.exceptions.FileReadException;
@@ -31,19 +33,35 @@ import org.eclipse.esmf.ame.services.utils.ZipUtils;
 import org.eclipse.esmf.aspectmodel.aas.AasFileFormat;
 import org.eclipse.esmf.aspectmodel.aas.AasGenerationConfigBuilder;
 import org.eclipse.esmf.aspectmodel.aas.AspectModelAasGenerator;
+import org.eclipse.esmf.aspectmodel.generator.Artifact;
 import org.eclipse.esmf.aspectmodel.generator.asyncapi.AspectModelAsyncApiGenerator;
 import org.eclipse.esmf.aspectmodel.generator.asyncapi.AsyncApiSchemaArtifact;
 import org.eclipse.esmf.aspectmodel.generator.asyncapi.AsyncApiSchemaGenerationConfig;
 import org.eclipse.esmf.aspectmodel.generator.asyncapi.AsyncApiSchemaGenerationConfigBuilder;
+import org.eclipse.esmf.aspectmodel.generator.diagram.AspectModelDiagramGenerator;
+import org.eclipse.esmf.aspectmodel.generator.diagram.DiagramGenerationConfig;
+import org.eclipse.esmf.aspectmodel.generator.diagram.DiagramGenerationConfigBuilder;
 import org.eclipse.esmf.aspectmodel.generator.docu.AspectModelDocumentationGenerator;
 import org.eclipse.esmf.aspectmodel.generator.docu.DocumentationGenerationConfig;
 import org.eclipse.esmf.aspectmodel.generator.docu.DocumentationGenerationConfigBuilder;
 import org.eclipse.esmf.aspectmodel.generator.json.AspectModelJsonPayloadGenerator;
 import org.eclipse.esmf.aspectmodel.generator.jsonschema.AspectModelJsonSchemaGenerator;
 import org.eclipse.esmf.aspectmodel.generator.jsonschema.JsonSchemaGenerationConfig;
+import org.eclipse.esmf.aspectmodel.generator.jsonld.AspectModelToJsonLdGenerator;
 import org.eclipse.esmf.aspectmodel.generator.jsonschema.JsonSchemaGenerationConfigBuilder;
 import org.eclipse.esmf.aspectmodel.generator.openapi.AspectModelOpenApiGenerator;
 import org.eclipse.esmf.aspectmodel.generator.openapi.OpenApiSchemaGenerationConfig;
+import org.eclipse.esmf.aspectmodel.generator.parquet.AspectModelParquetPayloadGenerator;
+import org.eclipse.esmf.aspectmodel.generator.sql.AspectModelSqlGenerator;
+import org.eclipse.esmf.aspectmodel.generator.sql.SqlGenerationConfig;
+import org.eclipse.esmf.aspectmodel.generator.sql.SqlGenerationConfigBuilder;
+import org.eclipse.esmf.aspectmodel.generator.sql.databricks.DatabricksSqlGenerationConfigBuilder;
+import org.eclipse.esmf.aspectmodel.generator.sql.postgresql.PostgreSqlGenerationConfigBuilder;
+import org.eclipse.esmf.aspectmodel.java.JavaCodeGenerationConfig;
+import org.eclipse.esmf.aspectmodel.java.JavaCodeGenerationConfigBuilder;
+import org.eclipse.esmf.aspectmodel.java.QualifiedName;
+import org.eclipse.esmf.aspectmodel.java.metamodel.StaticMetaModelJavaGenerator;
+import org.eclipse.esmf.aspectmodel.java.pojo.AspectModelJavaGenerator;
 import org.eclipse.esmf.aspectmodel.loader.AspectModelLoader;
 import org.eclipse.esmf.metamodel.AspectModel;
 
@@ -62,6 +80,7 @@ public class GenerateService {
    public static final String WRONG_RESOURCE_PATH_ID = "The resource path ID and properties ID do not match. Please verify and correct "
          + "them.";
    private static final Logger LOG = LoggerFactory.getLogger( GenerateService.class );
+   private static final Pattern JAVA_PACKAGE_NAME = Pattern.compile( "[a-zA-Z_$][\\w$]*(\\.[a-zA-Z_$][\\w$]*)*" );
 
    private final AspectModelLoader aspectModelLoader;
 
@@ -191,6 +210,131 @@ public class GenerateService {
       }
 
       return jsonOutput;
+   }
+
+   /**
+    * Renders the Aspect Model as a diagram.
+    *
+    * @param aspectModelFile the uploaded Aspect Model
+    * @param uri the URI of the Aspect Model
+    * @param language the language used for element labels
+    * @param format the image format of the diagram
+    * @return the rendered diagram
+    */
+   public byte[] generateDiagram( final CompletedFileUpload aspectModelFile, final URI uri, final String language,
+         final DiagramGenerationConfig.Format format ) {
+      final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
+      final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
+
+      final DiagramGenerationConfig config = DiagramGenerationConfigBuilder.builder().language( Locale.forLanguageTag( language ) )
+            .format( format ).build();
+
+      return new AspectModelDiagramGenerator( aspect, config ).getContent();
+   }
+
+   /**
+    * Generates a denormalized SQL table definition of the Aspect Model.
+    *
+    * @param aspectModelFile the uploaded Aspect Model
+    * @param uri the URI of the Aspect Model
+    * @param language the language used for table and column comments
+    * @param dialect the SQL dialect of the generated statement
+    * @return the SQL DDL statement
+    */
+   public String generateSql( final CompletedFileUpload aspectModelFile, final URI uri, final String language,
+         final SqlGenerationConfig.Dialect dialect ) {
+      final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
+      final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
+
+      final SqlGenerationConfig config = SqlGenerationConfigBuilder.builder().dialect( dialect )
+            .mappingStrategy( SqlGenerationConfig.MappingStrategy.DENORMALIZED )
+            .dialectSpecificConfig( buildDialectSpecificConfig( dialect, Locale.forLanguageTag( language ) ) ).build();
+
+      return new AspectModelSqlGenerator( aspect, config ).getContent();
+   }
+
+   private SqlGenerationConfig.DialectSpecificConfig buildDialectSpecificConfig( final SqlGenerationConfig.Dialect dialect,
+         final Locale language ) {
+      return switch ( dialect ) {
+         case DATABRICKS -> DatabricksSqlGenerationConfigBuilder.builder().commentLanguage( language ).build();
+         case POSTGRESQL -> PostgreSqlGenerationConfigBuilder.builder().commentLanguage( language ).build();
+      };
+   }
+
+   /**
+    * Generates a JSON-LD representation of the Aspect Model.
+    *
+    * @param aspectModelFile the uploaded Aspect Model
+    * @param uri the URI of the Aspect Model
+    * @return the JSON-LD document
+    */
+   public String generateJsonLd( final CompletedFileUpload aspectModelFile, final URI uri ) {
+      final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
+      final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
+
+      return new AspectModelToJsonLdGenerator( aspect ).generateJson();
+   }
+
+   /**
+    * Generates Java classes (POJOs) for the Aspect Model and packages them as a ZIP archive.
+    *
+    * @param aspectModelFile the uploaded Aspect Model
+    * @param uri the URI of the Aspect Model
+    * @param packageName the Java package of the classes; if blank, it is derived from the namespace of the Aspect
+    * @param staticMetaModel if set to true, the static meta model classes are generated in addition to the POJOs
+    * @param jacksonAnnotations if set to true, the classes are annotated for JSON (de-)serialization with Jackson
+    * @return the ZIP archive containing the Java source files
+    */
+   public byte[] generateJavaClasses( final CompletedFileUpload aspectModelFile, final URI uri, final String packageName,
+         final boolean staticMetaModel, final boolean jacksonAnnotations ) {
+      final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
+      final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
+
+      final JavaCodeGenerationConfig config = JavaCodeGenerationConfigBuilder.builder()
+            .packageName( resolveJavaPackageName( packageName, aspect ) ).enableJacksonAnnotations( jacksonAnnotations ).build();
+
+      final Stream<Artifact<QualifiedName, String>> pojos = new AspectModelJavaGenerator( aspect, config ).generate();
+      final Stream<Artifact<QualifiedName, String>> artifacts = staticMetaModel ?
+            Stream.concat( pojos, new StaticMetaModelJavaGenerator( aspect, config ).generate() ) :
+            pojos;
+
+      final Map<Path, byte[]> content = new HashMap<>();
+      artifacts.forEach( artifact -> content.put( javaSourcePath( artifact.getId() ), artifact.getContent().getBytes( StandardCharsets.UTF_8 ) ) );
+      return ZipUtils.createPackage( content );
+   }
+
+   private String resolveJavaPackageName( final String packageName, final org.eclipse.esmf.metamodel.Aspect aspect ) {
+      if ( packageName == null || packageName.isBlank() ) {
+         // Namespaces may contain characters (e.g. '-') that are not allowed in Java identifiers
+         return aspect.urn().getNamespaceMainPart().replaceAll( "[^\\w.$]", "_" );
+      }
+      if ( !JAVA_PACKAGE_NAME.matcher( packageName ).matches() ) {
+         throw new GenerationException( String.format( "'%s' is not a valid Java package name.", packageName ) );
+      }
+      return packageName;
+   }
+
+   private Path javaSourcePath( final QualifiedName qualifiedName ) {
+      return Path.of( qualifiedName.getPackageName().replace( '.', '/' ), qualifiedName.getClassName() + ".java" );
+   }
+
+   /**
+    * Generates a sample payload of the Aspect Model in the Apache Parquet format.
+    *
+    * @param aspectModelFile the uploaded Aspect Model
+    * @param uri the URI of the Aspect Model
+    * @return the Parquet file
+    */
+   public byte[] generateParquetPayload( final CompletedFileUpload aspectModelFile, final URI uri ) {
+      final InputStream inputStream = openInputStreamFromUpload( aspectModelFile );
+      final AspectModel aspectModel = aspectModelLoader.load( inputStream, uri );
+      final org.eclipse.esmf.metamodel.Aspect aspect = extractAspect( aspectModel, uri );
+
+      return new AspectModelParquetPayloadGenerator( aspect ).getContent();
    }
 
    public byte[] generateAsyncApiSpec( final CompletedFileUpload aspectModelFile, final URI uri, final String language, final String output,

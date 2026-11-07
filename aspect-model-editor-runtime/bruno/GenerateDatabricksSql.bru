@@ -1,0 +1,29 @@
+meta {
+  name: GenerateDatabricksSql
+  type: http
+  seq: 114
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/generate/sql?language=en&dialect=DATABRICKS
+  body: multipartForm
+  auth: none
+}
+
+headers {
+  uri: blob://movement.ttl
+}
+
+body:multipart-form {
+  aspectModel: @file(./TestingFiles/Movement.ttl)
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Response contains a CREATE TABLE statement", function() {
+    expect(res.getBody()).to.include("CREATE TABLE");
+  });
+}

@@ -22,6 +22,7 @@ import org.eclipse.esmf.ame.exceptions.FileNotFoundException;
 import org.eclipse.esmf.ame.exceptions.FileReadException;
 import org.eclipse.esmf.ame.security.FileNameSanitizer;
 import org.eclipse.esmf.ame.services.PackageService;
+import org.eclipse.esmf.ame.services.models.AasImportCandidate;
 import org.eclipse.esmf.ame.services.models.Version;
 
 import io.micronaut.http.HttpHeaders;
@@ -90,6 +91,34 @@ public class PackageController {
       }
 
       return HttpResponse.ok( packageService.importPackage( zipFile, workspace.orElse( null ) ) );
+   }
+
+   /**
+    * Lists the Aspect Models that would be created from the submodel templates of an Asset Administration Shell file.
+    *
+    * @param aasFile - The AAS file (AASX, AAS XML or AAS JSON).
+    * @param workspace - The target workspace, the default workspace if empty.
+    * @return A HttpResponse containing one candidate per submodel template.
+    */
+   @Post( "/import-aas/preview" )
+   @Consumes( MediaType.MULTIPART_FORM_DATA )
+   public HttpResponse<List<AasImportCandidate>> previewAasImport( @Part( "aasFile" ) final CompletedFileUpload aasFile,
+         @QueryValue( ApplicationConstants.Headers.WORKSPACE ) final Optional<String> workspace ) {
+      return HttpResponse.ok( packageService.previewAasImport( aasFile, workspace.orElse( null ) ) );
+   }
+
+   /**
+    * Converts the submodel templates of an Asset Administration Shell file into Aspect Models and stores them in a workspace.
+    *
+    * @param aasFile - The AAS file (AASX, AAS XML or AAS JSON).
+    * @param workspace - The target workspace, the default workspace if empty.
+    * @return A HttpResponse containing the imported models grouped by namespace and version.
+    */
+   @Post( "/import-aas" )
+   @Consumes( MediaType.MULTIPART_FORM_DATA )
+   public HttpResponse<Map<String, List<Version>>> importAas( @Part( "aasFile" ) final CompletedFileUpload aasFile,
+         @QueryValue( ApplicationConstants.Headers.WORKSPACE ) final Optional<String> workspace ) {
+      return HttpResponse.ok( packageService.importAas( aasFile, workspace.orElse( null ) ) );
    }
 
    /**

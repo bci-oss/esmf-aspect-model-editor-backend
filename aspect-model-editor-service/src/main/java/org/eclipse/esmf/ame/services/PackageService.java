@@ -16,6 +16,7 @@ package org.eclipse.esmf.ame.services;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,6 +24,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -32,17 +34,21 @@ import org.eclipse.esmf.ame.constants.ApplicationConstants;
 import org.eclipse.esmf.ame.exceptions.CreateFileException;
 import org.eclipse.esmf.ame.exceptions.FileReadException;
 import org.eclipse.esmf.ame.exceptions.InvalidAspectModelException;
+import org.eclipse.esmf.ame.services.models.AasImportCandidate;
 import org.eclipse.esmf.ame.services.models.Version;
 import org.eclipse.esmf.ame.services.utils.ModelGroupingUtils;
 import org.eclipse.esmf.ame.services.workspace.WorkspaceConfigService;
 import org.eclipse.esmf.aspectmodel.AspectModelFile;
 import org.eclipse.esmf.aspectmodel.ValueParsingException;
+import org.eclipse.esmf.aspectmodel.aas.AasFileFormat;
+import org.eclipse.esmf.aspectmodel.aas.AasToAspectModelGenerator;
 import org.eclipse.esmf.aspectmodel.edit.AspectChangeManager;
 import org.eclipse.esmf.aspectmodel.edit.AspectChangeManagerConfig;
 import org.eclipse.esmf.aspectmodel.edit.AspectChangeManagerConfigBuilder;
 import org.eclipse.esmf.aspectmodel.edit.Change;
 import org.eclipse.esmf.aspectmodel.edit.ChangeGroup;
 import org.eclipse.esmf.aspectmodel.edit.change.AddAspectModelFile;
+import org.eclipse.esmf.aspectmodel.generator.AspectArtifact;
 import org.eclipse.esmf.aspectmodel.loader.AspectModelLoader;
 import org.eclipse.esmf.aspectmodel.resolver.NamespacePackage;
 import org.eclipse.esmf.aspectmodel.resolver.fs.ModelsRoot;
@@ -51,11 +57,13 @@ import org.eclipse.esmf.aspectmodel.resolver.modelfile.RawAspectModelFileBuilder
 import org.eclipse.esmf.aspectmodel.serializer.AspectSerializer;
 import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 import org.eclipse.esmf.aspectmodel.validation.services.AspectModelValidator;
+import org.eclipse.esmf.metamodel.Aspect;
 import org.eclipse.esmf.metamodel.AspectModel;
 
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.multipart.CompletedFileUpload;
 import jakarta.inject.Singleton;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,8 +132,7 @@ public class PackageService {
 
          final List<File> list = saveAspectModelFiles( changeManager.aspectModelFiles() ).map( File::new ).toList();
 
-         return new ModelGroupingUtils( aspectModelLoader, aspectModelValidator,
-               workspaceConfigService != null ? workspaceConfigService::findSource : null ).groupModelsByNamespaceAndVersion( list );
+         return groupByNamespaceAndVersion( list );
       } catch ( final ValueParsingException | IOException e ) {
          if ( e instanceof ValueParsingException ) {
             throw new InvalidAspectModelException( "The structure inside the " + ApplicationConstants.FileExtensions.ZIP + " file does not match the expected format.", e );
@@ -133,6 +140,104 @@ public class PackageService {
             throw new FileReadException( "Could not read from input: " + e.getMessage(), e );
          }
       }
+   }
+
+   /**
+    * Lists the Aspect Models that would be created from the submodel templates of an Asset Administration Shell file.
+    *
+    * @param aasFile the AAS file (AASX, AAS XML or AAS JSON)
+    * @param workspace the target workspace, {@code null} for the default workspace
+    * @return one candidate per submodel template
+    */
+   public List<AasImportCandidate> previewAasImport( final CompletedFileUpload aasFile, final @Nullable String workspace ) {
+      final ModelsRoot modelsRoot = new StructuredModelsRoot( resolveWorkspace( workspace ) );
+
+      return convertAas( aasFile ).stream().map( aspect -> {
+         final AspectModelUrn urn = aspect.urn();
+         final Path target = aasImportTarget( aspect, modelsRoot );
+         return new AasImportCandidate( urn.toString(), urn.getNamespaceMainPart(), urn.getVersion(), target.getFileName().toString(),
+               Files.exists( target ) );
+      } ).toList();
+   }
+
+   /**
+    * Converts the submodel templates of an Asset Administration Shell file into Aspect Models and stores them in a workspace.
+    * Existing files are never overwritten.
+    *
+    * @param aasFile the AAS file (AASX, AAS XML or AAS JSON)
+    * @param workspace the target workspace, {@code null} for the default workspace
+    * @return the imported models grouped by namespace and version
+    * @throws CreateFileException if a target file already exists or cannot be written
+    */
+   public Map<String, List<Version>> importAas( final CompletedFileUpload aasFile, final @Nullable String workspace ) {
+      final ModelsRoot modelsRoot = new StructuredModelsRoot( resolveWorkspace( workspace ) );
+      final List<Aspect> aspects = convertAas( aasFile );
+
+      final List<Path> existingTargets = aspects.stream().map( aspect -> aasImportTarget( aspect, modelsRoot ) ).filter( Files::exists )
+            .toList();
+      if ( !existingTargets.isEmpty() ) {
+         throw new CreateFileException( "The following Aspect Model files already exist: " + existingTargets.stream()
+               .map( path -> path.getFileName().toString() ).toList() );
+      }
+
+      final List<File> written = aspects.stream().map( aspect -> writeAspect( aspect, aasImportTarget( aspect, modelsRoot ) ) ).toList();
+      return groupByNamespaceAndVersion( written );
+   }
+
+   private List<Aspect> convertAas( final CompletedFileUpload aasFile ) {
+      final AasFileFormat format = aasFileFormat( aasFile.getFilename() );
+      final List<Aspect> aspects;
+      try ( final InputStream inputStream = aasFile.getInputStream() ) {
+         aspects = aasGenerator( format, inputStream ).generate().map( AspectArtifact::getContent ).toList();
+      } catch ( final IOException e ) {
+         throw new FileReadException( "Could not read from input: " + e.getMessage(), e );
+      } catch ( final RuntimeException e ) {
+         throw new InvalidAspectModelException( String.format( "The file '%s' is not a valid Asset Administration Shell: %s",
+               aasFile.getFilename(), e.getMessage() ), e );
+      }
+
+      if ( aspects.isEmpty() ) {
+         throw new InvalidAspectModelException(
+               String.format( "The file '%s' does not contain any submodel templates.", aasFile.getFilename() ) );
+      }
+      return aspects;
+   }
+
+   private AasFileFormat aasFileFormat( final String fileName ) {
+      return switch ( FilenameUtils.getExtension( fileName ).toLowerCase( Locale.ROOT ) ) {
+         case "aasx" -> AasFileFormat.AASX;
+         case "xml" -> AasFileFormat.XML;
+         case "json" -> AasFileFormat.JSON;
+         default -> throw new FileReadException(
+               String.format( "The selected file '%s' is not an AASX, AAS XML or AAS JSON file.", fileName ) );
+      };
+   }
+
+   private AasToAspectModelGenerator aasGenerator( final AasFileFormat format, final InputStream inputStream ) {
+      return switch ( format ) {
+         case AASX -> AasToAspectModelGenerator.fromAasx( inputStream );
+         case XML -> AasToAspectModelGenerator.fromAasXml( inputStream );
+         case JSON -> AasToAspectModelGenerator.fromAasJson( inputStream );
+      };
+   }
+
+   private Path aasImportTarget( final Aspect aspect, final ModelsRoot modelsRoot ) {
+      return modelsRoot.directoryForNamespace( aspect.urn() ).resolve( aspect.getName() + ApplicationConstants.FileExtensions.TTL );
+   }
+
+   private File writeAspect( final Aspect aspect, final Path target ) {
+      try {
+         Files.createDirectories( target.getParent() );
+         Files.writeString( target, AspectSerializer.INSTANCE.aspectToString( aspect ) );
+         return target.toFile();
+      } catch ( final IOException e ) {
+         throw new CreateFileException( "Could not write Aspect Model file: " + target.getFileName(), e );
+      }
+   }
+
+   private Map<String, List<Version>> groupByNamespaceAndVersion( final List<File> files ) {
+      return new ModelGroupingUtils( aspectModelLoader, aspectModelValidator,
+            workspaceConfigService != null ? workspaceConfigService::findSource : null ).groupModelsByNamespaceAndVersion( files );
    }
 
    private AddAspectModelFile createAddChange( final AspectModelFile file, final ModelsRoot modelsRoot ) {

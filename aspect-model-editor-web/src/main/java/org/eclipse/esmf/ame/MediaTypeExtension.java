@@ -18,7 +18,7 @@ import io.micronaut.http.MediaType;
 /**
  * A utility class that extends the functionality of {@link MediaType} by providing additional media type constants.
  * This class includes constants for media types such as `application/schema+json`, `application/aasx`, `text/turtle`,
- * `image/svg+xml`, and `application/zip`.
+ * `image/svg+xml`, `application/ld+json` and `application/zip`.
  *
  * <p>Note: This class is not meant to be instantiated.</p>
  */
@@ -44,9 +44,24 @@ public final class MediaTypeExtension {
    public static final MediaType TEXT_TURTLE;
 
    /**
+    * A String equivalent of {@link MediaTypeExtension#IMAGE_SVG} which is a new {@link MediaType}.
+    */
+   public static final String IMAGE_SVG_VALUE = "image/svg+xml";
+
+   /**
     * Public constant media type for {@code image/svg+xml}.
     */
    public static final MediaType IMAGE_SVG;
+
+   /**
+    * Public constant media type for {@code application/ld+json}.
+    */
+   public static final String APPLICATION_LD_JSON = "application/ld+json";
+
+   /**
+    * Public constant media type for {@code application/vnd.apache.parquet}.
+    */
+   public static final String APPLICATION_PARQUET = "application/vnd.apache.parquet";
 
    public static final String APPLICATION_ZIP_VALUE = "application/zip";
 
@@ -57,7 +72,7 @@ public final class MediaTypeExtension {
 
    static {
       TEXT_TURTLE = new MediaType( "text/turtle" );
-      IMAGE_SVG = new MediaType( "image/svg+xml" );
+      IMAGE_SVG = new MediaType( IMAGE_SVG_VALUE );
       APPLICATION_SCHEMA_JSON = new MediaType( "application/schema+json" );
       APPLICATION_ZIP = new MediaType( "application/zip" );
    }

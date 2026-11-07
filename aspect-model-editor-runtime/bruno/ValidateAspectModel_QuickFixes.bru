@@ -1,0 +1,35 @@
+meta {
+  name: ValidateAspectModel_QuickFixes
+  type: http
+  seq: 110
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/models/validate
+  body: multipartForm
+  auth: none
+}
+
+headers {
+  uri: blob://movement.ttl
+}
+
+body:multipart-form {
+  aspectModel: @file(./TestingFiles/AspectWithMissingLanguageTag.ttl)
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Violation offers a quick fix adding a language tag", function() {
+    const violation = res.getBody().violationErrors.find(v => v.quickFixes && v.quickFixes.length > 0);
+    expect(violation).to.exist;
+    const quickFix = violation.quickFixes[0];
+    expect(quickFix.element).to.equal("urn:samm:org.eclipse.examples:1.0.0#AspectWithMissingLanguageTag");
+    expect(quickFix.property).to.equal("urn:samm:org.eclipse.esmf.samm:meta-model:2.2.0#preferredName");
+    expect(quickFix.oldValue.value).to.equal("Aspect without language tag");
+    expect(quickFix.newValue.language).to.be.a("string").that.is.not.empty;
+  });
+}

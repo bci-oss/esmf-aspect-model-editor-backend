@@ -1,0 +1,17 @@
+meta {
+  name: ImportAas_Cleanup
+  type: http
+  seq: 119
+}
+
+delete {
+  url: http://localhost:{{port}}/ame/api/models/namespace?namespace=org.eclipse.esmf.aasimport&version=1.0.0
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

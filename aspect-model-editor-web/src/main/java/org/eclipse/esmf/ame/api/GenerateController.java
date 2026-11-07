@@ -23,8 +23,10 @@ import org.eclipse.esmf.ame.constants.ApplicationConstants;
 import org.eclipse.esmf.ame.exceptions.GenerationException;
 import org.eclipse.esmf.ame.exceptions.UriNotDefinedException;
 import org.eclipse.esmf.ame.services.GenerateService;
+import org.eclipse.esmf.aspectmodel.generator.diagram.DiagramGenerationConfig;
 import org.eclipse.esmf.aspectmodel.generator.openapi.OpenApiSchemaGenerationConfig;
 import org.eclipse.esmf.aspectmodel.generator.openapi.PagingOption;
+import org.eclipse.esmf.aspectmodel.generator.sql.SqlGenerationConfig;
 
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
@@ -143,6 +145,91 @@ public class GenerateController {
          @Part( "aspectModel" ) final CompletedFileUpload aspectModel ) {
       final URI uri = parseAndValidateUri( optionalUri );
       return HttpResponse.ok( generateService.generateAasJsonFile( aspectModel, uri ) );
+   }
+
+   /**
+    * Renders the Aspect Model as a diagram.
+    *
+    * @param aspectModel the Aspect Model Data
+    * @param language the language used for element labels
+    * @param format the image format of the diagram (SVG or PNG)
+    * @return the rendered diagram
+    */
+   @Post( uri = "/diagram", consumes = MediaType.MULTIPART_FORM_DATA )
+   @Produces( { MediaTypeExtension.IMAGE_SVG_VALUE, MediaType.IMAGE_PNG } )
+   public HttpResponse<byte[]> generateDiagram( @Header( ApplicationConstants.Headers.URI ) final Optional<String> optionalUri,
+         @Part( "aspectModel" ) final CompletedFileUpload aspectModel, @QueryValue( defaultValue = "en" ) final String language,
+         @QueryValue( defaultValue = "SVG" ) final DiagramGenerationConfig.Format format ) {
+      final URI uri = parseAndValidateUri( optionalUri );
+      final String contentType = format == DiagramGenerationConfig.Format.PNG ? MediaType.IMAGE_PNG : MediaTypeExtension.IMAGE_SVG_VALUE;
+      return HttpResponse.ok( generateService.generateDiagram( aspectModel, uri, language, format ) ).contentType( contentType );
+   }
+
+   /**
+    * Generates a denormalized SQL table definition of the Aspect Model.
+    *
+    * @param aspectModel the Aspect Model Data
+    * @param language the language used for table and column comments
+    * @param dialect the SQL dialect of the generated statement
+    * @return the SQL DDL statement
+    */
+   @Post( uri = "/sql", consumes = MediaType.MULTIPART_FORM_DATA )
+   @Produces( MediaType.TEXT_PLAIN )
+   public HttpResponse<String> generateSql( @Header( ApplicationConstants.Headers.URI ) final Optional<String> optionalUri,
+         @Part( "aspectModel" ) final CompletedFileUpload aspectModel, @QueryValue( defaultValue = "en" ) final String language,
+         @QueryValue( defaultValue = "POSTGRESQL" ) final SqlGenerationConfig.Dialect dialect ) {
+      final URI uri = parseAndValidateUri( optionalUri );
+      return HttpResponse.ok( generateService.generateSql( aspectModel, uri, language, dialect ) );
+   }
+
+   /**
+    * Generates a JSON-LD representation of the Aspect Model.
+    *
+    * @param aspectModel the Aspect Model Data
+    * @return the JSON-LD document
+    */
+   @Post( uri = "/json-ld", consumes = MediaType.MULTIPART_FORM_DATA )
+   @Produces( MediaTypeExtension.APPLICATION_LD_JSON )
+   public HttpResponse<String> generateJsonLd( @Header( ApplicationConstants.Headers.URI ) final Optional<String> optionalUri,
+         @Part( "aspectModel" ) final CompletedFileUpload aspectModel ) {
+      final URI uri = parseAndValidateUri( optionalUri );
+      return HttpResponse.ok( generateService.generateJsonLd( aspectModel, uri ) );
+   }
+
+   /**
+    * This method is used to generate Java classes for the Aspect Model, packaged as a ZIP archive.
+    *
+    * @param aspectModel the Aspect Model Data
+    * @param packageName the Java package of the generated classes; derived from the namespace if empty
+    * @param staticMetaModel if set to true, the static meta model classes are generated in addition to the POJOs
+    * @param jacksonAnnotations if set to true, the classes are annotated for JSON (de-)serialization with Jackson
+    * @return the ZIP archive containing the Java source files
+    */
+   @Post( uri = "/java", consumes = MediaType.MULTIPART_FORM_DATA )
+   @Produces( MediaType.APPLICATION_ZIP )
+   public HttpResponse<byte[]> generateJavaClasses( @Header( ApplicationConstants.Headers.URI ) final Optional<String> optionalUri,
+         @Part( "aspectModel" ) final CompletedFileUpload aspectModel, @QueryValue( defaultValue = "" ) final String packageName,
+         @QueryValue( defaultValue = "false" ) final boolean staticMetaModel,
+         @QueryValue( defaultValue = "true" ) final boolean jacksonAnnotations ) {
+      final URI uri = parseAndValidateUri( optionalUri );
+      final byte[] javaClasses = generateService.generateJavaClasses( aspectModel, uri, packageName, staticMetaModel, jacksonAnnotations );
+
+      return HttpResponse.ok().header( HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"java-classes.zip\"" )
+            .body( javaClasses ).contentType( MediaType.APPLICATION_ZIP );
+   }
+
+   /**
+    * This method is used to generate a sample payload of the Aspect Model in the Apache Parquet format.
+    *
+    * @param aspectModel the Aspect Model Data
+    * @return the Parquet file
+    */
+   @Post( uri = "/parquet-payload", consumes = MediaType.MULTIPART_FORM_DATA )
+   @Produces( MediaTypeExtension.APPLICATION_PARQUET )
+   public HttpResponse<byte[]> generateParquetPayload( @Header( ApplicationConstants.Headers.URI ) final Optional<String> optionalUri,
+         @Part( "aspectModel" ) final CompletedFileUpload aspectModel ) {
+      final URI uri = parseAndValidateUri( optionalUri );
+      return HttpResponse.ok( generateService.generateParquetPayload( aspectModel, uri ) );
    }
 
    /**

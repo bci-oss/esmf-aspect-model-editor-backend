@@ -1,0 +1,25 @@
+meta {
+  name: Refactoring_GetProgress
+  type: http
+  seq: 123
+}
+
+get {
+  url: http://localhost:{{port}}/ame/api/refactoring/progress
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("No refactoring is running", function() {
+    const body = res.getBody();
+    expect(body.running).to.equal(false);
+    expect(body.step).to.equal(0);
+    expect(body.steps).to.equal(0);
+    expect(body.files).to.equal(0);
+  });
+}

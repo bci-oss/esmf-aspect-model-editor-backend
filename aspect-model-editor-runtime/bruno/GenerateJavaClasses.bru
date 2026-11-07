@@ -1,0 +1,38 @@
+meta {
+  name: GenerateJavaClasses
+  type: http
+  seq: 120
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/generate/java?packageName=com.example.movement&staticMetaModel=true
+  body: multipartForm
+  auth: none
+}
+
+params:query {
+  packageName: com.example.movement
+  staticMetaModel: true
+}
+
+headers {
+  uri: blob://movement.ttl
+}
+
+body:multipart-form {
+  aspectModel: @file(./TestingFiles/Movement.ttl)
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Content type is application/zip", function() {
+    expect(res.getHeader("content-type")).to.include("application/zip");
+  });
+
+  test("Response is offered as ZIP attachment", function() {
+    expect(res.getHeader("content-disposition")).to.include("java-classes.zip");
+  });
+}

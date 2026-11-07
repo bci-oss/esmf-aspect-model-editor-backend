@@ -1,0 +1,34 @@
+meta {
+  name: Refactoring_PreviewRenameNamespace
+  type: http
+  seq: 107
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/refactoring/preview
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "type": "RENAME_NAMESPACE",
+    "namespace": "org.eclipse.bruno.refactoring",
+    "version": "1.0.0",
+    "targetNamespace": "org.eclipse.bruno.renamed",
+    "targetVersion": "1.0.0"
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("The files of the namespace are moved and references are updated", function() {
+    const body = res.getBody();
+    expect(body.created.map(file => file.namespace)).to.eql(["org.eclipse.bruno.renamed"]);
+    expect(body.removed.map(file => file.namespace)).to.eql(["org.eclipse.bruno.refactoring"]);
+    expect(body.modified.map(file => file.fileName)).to.eql(["Consumer.ttl"]);
+  });
+}
