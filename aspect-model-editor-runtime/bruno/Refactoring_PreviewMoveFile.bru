@@ -1,0 +1,37 @@
+meta {
+  name: Refactoring_PreviewMoveFile
+  type: http
+  seq: 124
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/refactoring/preview
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "type": "MOVE_FILE",
+    "namespace": "org.eclipse.bruno.refactoring",
+    "version": "1.0.0",
+    "fileName": "Provider.ttl",
+    "targetNamespace": "org.eclipse.bruno.moved",
+    "targetVersion": "2.0.0"
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("The file is moved to the target namespace and its users are updated", function() {
+    const body = res.getBody();
+    expect(body.description).to.equal("Move Provider.ttl to org.eclipse.bruno.moved:2.0.0/Provider.ttl");
+    expect(body.created.map(file => [file.namespace, file.version, file.fileName])).to.eql([["org.eclipse.bruno.moved", "2.0.0", "Provider.ttl"]]);
+    expect(body.removed.map(file => file.fileName)).to.eql(["Provider.ttl"]);
+    expect(body.modified.map(file => file.fileName)).to.eql(["Consumer.ttl"]);
+    expect(body.applicable).to.equal(true);
+  });
+}

@@ -26,5 +26,7 @@ public enum RefactoringType {
    /** Copies a namespace version or a single file to an increased version. */
    NEW_VERSION,
    /** Renames an Aspect Model file within its namespace version. */
-   RENAME_FILE
+   RENAME_FILE,
+   /** Moves a single Aspect Model file into another namespace version and updates all references to its elements. */
+   MOVE_FILE
 }

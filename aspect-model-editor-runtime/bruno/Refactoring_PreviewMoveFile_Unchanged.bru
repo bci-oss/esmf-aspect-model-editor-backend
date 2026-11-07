@@ -1,0 +1,32 @@
+meta {
+  name: Refactoring_PreviewMoveFile_Unchanged
+  type: http
+  seq: 125
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/refactoring/preview
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "type": "MOVE_FILE",
+    "namespace": "org.eclipse.bruno.refactoring",
+    "version": "1.0.0",
+    "fileName": "Provider.ttl",
+    "targetNamespace": "org.eclipse.bruno.refactoring",
+    "targetVersion": "1.0.0"
+  }
+}
+
+tests {
+  test("Status code is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("Error message explains that nothing changes", function() {
+    expect(res.getBody().error.message).to.include("unchanged");
+  });
+}

@@ -127,10 +127,10 @@ class RefactoringServiceTest {
       final List<RefactoringProgress> observed = new ArrayList<>();
       service = refactoringService( new RefactoringHistoryService( tempDir.resolve( "history" ), JsonMapper.createDefault() ) {
          @Override
-         public synchronized RefactoringHistoryEntry record( final String description, final List<ChangedFile> created,
-               final List<ChangedFile> modified, final List<ChangedFile> removed, final Runnable write ) {
+         public synchronized RefactoringHistoryEntry record( final String description, final RefactoringRequest request,
+               final List<ChangedFile> created, final List<ChangedFile> modified, final List<ChangedFile> removed, final Runnable write ) {
             observed.add( service.getProgress() );
-            return super.record( description, created, modified, removed, write );
+            return super.record( description, request, created, modified, removed, write );
          }
       } );
       assertEquals( RefactoringProgress.IDLE, service.getProgress() );
@@ -243,6 +243,81 @@ class RefactoringServiceTest {
    }
 
    @Test
+   void moveFileMovesItsElementsToTheTargetNamespaceAndUpdatesTheReferences() throws IOException {
+      final Path provider = providerA( defaultWorkspace );
+      final Path consumer = consumerB( second );
+      final String originalProvider = Files.readString( provider );
+      final String originalConsumer = Files.readString( consumer );
+
+      final RefactoringHistoryEntry entry = service.apply( moveFile( "Provider.ttl", "org.example.c", "2.0.0", null ) );
+
+      final Path moved = defaultWorkspace.resolve( "org.example.c" ).resolve( "2.0.0" ).resolve( "Provider.ttl" );
+      assertEquals( List.of( moved.toString() ), paths( entry.created() ) );
+      assertEquals( List.of( provider.toString() ), paths( entry.removed() ) );
+      assertEquals( List.of( consumer.toString() ), paths( entry.modified() ) );
+      assertEquals( "Move Provider.ttl to org.example.c:2.0.0/Provider.ttl", entry.description() );
+      assertTrue( Files.readString( moved ).contains( "@prefix : <urn:samm:org.example.c:2.0.0#>" ) );
+      assertTrue( Files.readString( moved ).contains( ":sharedProperty" ) );
+      assertFalse( Files.readString( moved ).contains( "org.example.a" ) );
+      assertTrue( Files.readString( consumer ).contains( "@prefix c: <urn:samm:org.example.c:2.0.0#>" ) );
+      assertTrue( Files.readString( consumer ).contains( "c:sharedProperty" ) );
+
+      service.revert( entry.id(), false );
+      assertEquals( originalProvider, Files.readString( provider ) );
+      assertEquals( originalConsumer, Files.readString( consumer ) );
+      assertFalse( Files.exists( moved ) );
+   }
+
+   @Test
+   void moveFileKeepsTheReferencesToElementsRemainingInTheOldNamespace() throws IOException {
+      final Path provider = providerA( defaultWorkspace );
+      final Path user = write( defaultWorkspace, "org.example.a", "1.0.0", "User.ttl", """
+            @prefix : <urn:samm:org.example.a:1.0.0#> .
+            :userProperty a samm:Property ; samm:characteristic :SharedCharacteristic .
+            """ );
+
+      final RefactoringHistoryEntry entry = service.apply( moveFile( "User.ttl", "org.example.c", "1.0.0", "Moved.ttl" ) );
+
+      final Path moved = defaultWorkspace.resolve( "org.example.c" ).resolve( "1.0.0" ).resolve( "Moved.ttl" );
+      assertEquals( List.of( moved.toString() ), paths( entry.created() ) );
+      assertEquals( List.of( user.toString() ), paths( entry.removed() ) );
+      final String content = Files.readString( moved );
+      assertTrue( content.contains( "@prefix : <urn:samm:org.example.c:1.0.0#>" ) );
+      assertTrue( content.contains( "@prefix a: <urn:samm:org.example.a:1.0.0#>" ) );
+      assertTrue( content.contains( ":userProperty" ) );
+      assertTrue( content.contains( "a:SharedCharacteristic" ) );
+      assertTrue( Files.readString( provider ).contains( ":SharedCharacteristic a samm:Characteristic" ) );
+   }
+
+   @Test
+   void moveFileIsRefusedIfTheTargetExistsOrNothingChanges() {
+      providerA( defaultWorkspace );
+      write( defaultWorkspace, "org.example.c", "1.0.0", "Provider.ttl", """
+            @prefix : <urn:samm:org.example.c:1.0.0#> .
+            """ );
+      write( defaultWorkspace, "org.example.d", "1.0.0", "Other.ttl", """
+            @prefix : <urn:samm:org.example.d:1.0.0#> .
+            :sharedProperty a samm:Property ; samm:characteristic samm-c:Text .
+            """ );
+
+      assertThrows( RefactoringException.class, () -> service.preview( moveFile( "Provider.ttl", "org.example.c", "1.0.0", null ) ) );
+      assertThrows( RefactoringException.class, () -> service.preview( moveFile( "Provider.ttl", "org.example.d", "1.0.0", null ) ) );
+      assertThrows( IllegalArgumentException.class, () -> service.preview( moveFile( "Provider.ttl", "org.example.a", "1.0.0", null ) ) );
+      assertThrows( NoSuchElementException.class, () -> service.preview( moveFile( "Unknown.ttl", "org.example.c", "1.0.0", null ) ) );
+   }
+
+   @Test
+   void historyEntriesContainTheRequest() throws IOException {
+      providerA( defaultWorkspace );
+      final RefactoringRequest request = renameElement( SHARED_PROPERTY, "renamedProperty" );
+
+      final RefactoringHistoryEntry entry = service.apply( request );
+
+      assertEquals( request, entry.request() );
+      assertEquals( request, service.getHistory().getFirst().request() );
+   }
+
+   @Test
    void refactoringsChangingFilesOfGithubSourcesAreBlocked() throws IOException {
       final Path provider = providerA( defaultWorkspace );
       final GithubSourceConfig source = configService.addGithubSource(
@@ -284,6 +359,12 @@ class RefactoringServiceTest {
    private static RefactoringRequest moveElement( final String urn, final String namespace, final String version, final String fileName ) {
       return new RefactoringRequest( RefactoringType.MOVE_ELEMENT, urn, null, null, null, null, null, namespace, version, fileName, null,
             null );
+   }
+
+   private static RefactoringRequest moveFile( final String fileName, final String targetNamespace, final String targetVersion,
+         final String targetFileName ) {
+      return new RefactoringRequest( RefactoringType.MOVE_FILE, null, null, "org.example.a", "1.0.0", fileName, null, targetNamespace,
+            targetVersion, targetFileName, null, null );
    }
 
    private static List<String> paths( final List<ChangedFile> files ) {

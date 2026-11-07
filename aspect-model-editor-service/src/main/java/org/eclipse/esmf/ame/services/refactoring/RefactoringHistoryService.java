@@ -36,6 +36,7 @@ import org.eclipse.esmf.ame.config.ApplicationSettings;
 import org.eclipse.esmf.ame.exceptions.RefactoringException;
 import org.eclipse.esmf.ame.services.models.refactoring.ChangedFile;
 import org.eclipse.esmf.ame.services.models.refactoring.RefactoringHistoryEntry;
+import org.eclipse.esmf.ame.services.models.refactoring.RefactoringRequest;
 import org.eclipse.esmf.ame.services.models.refactoring.RefactoringSnapshot;
 import org.eclipse.esmf.ame.services.models.refactoring.RefactoringSnapshot.Change;
 import org.eclipse.esmf.ame.services.models.refactoring.RefactoringSnapshot.FileState;
@@ -79,6 +80,7 @@ public class RefactoringHistoryService {
     * fails, the backed up files are restored and the files created so far are removed.
     *
     * @param description a short description of the refactoring
+    * @param request the request the refactoring is applied with, used to offer its revert
     * @param created the files the refactoring creates
     * @param modified the files the refactoring modifies
     * @param removed the files the refactoring removes
@@ -86,8 +88,8 @@ public class RefactoringHistoryService {
     * @return the recorded refactoring
     * @throws RefactoringException if a file to create exists already
     */
-   public synchronized RefactoringHistoryEntry record( final String description, final List<ChangedFile> created,
-         final List<ChangedFile> modified, final List<ChangedFile> removed, final Runnable write ) {
+   public synchronized RefactoringHistoryEntry record( final String description, final RefactoringRequest request,
+         final List<ChangedFile> created, final List<ChangedFile> modified, final List<ChangedFile> removed, final Runnable write ) {
       requireNotExisting( created );
       final String id = UUID.randomUUID().toString();
       final Path entryDirectory = historyPath.resolve( id );
@@ -111,7 +113,7 @@ public class RefactoringHistoryService {
       }
 
       final RefactoringHistoryEntry entry = new RefactoringHistoryEntry( id, description, System.currentTimeMillis(), created, modified,
-            removed );
+            removed, request );
       final List<FileState> files = new ArrayList<>( created.stream()
             .map( file -> new FileState( file.path(), Change.CREATED, null, hash( Path.of( file.path() ) ) ) )
             .toList() );

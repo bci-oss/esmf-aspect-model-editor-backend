@@ -30,6 +30,8 @@ import io.micronaut.serde.annotation.Serdeable;
  *    <li>{@link RefactoringType#NEW_VERSION}: {@code namespace}, {@code version}, {@code increase}, optionally
  *    {@code fileName} to copy a single file only</li>
  *    <li>{@link RefactoringType#RENAME_FILE}: {@code namespace}, {@code version}, {@code fileName}, {@code newName}</li>
+ *    <li>{@link RefactoringType#MOVE_FILE}: {@code namespace}, {@code version}, {@code fileName}, {@code targetNamespace},
+ *    {@code targetVersion}, optionally {@code targetFileName} (default: the same file name)</li>
  * </ul>
  *
  * @param type the kind of refactoring
@@ -41,7 +43,7 @@ import io.micronaut.serde.annotation.Serdeable;
  * @param source the root directory of the source containing the file, {@code null} to search all sources
  * @param targetNamespace the new namespace
  * @param targetVersion the new version
- * @param targetFileName the file to move an element to; it is created if it does not exist
+ * @param targetFileName the file to move an element to; it is created if it does not exist. The new name of a moved file.
  * @param targetWorkspace the workspace a new file is created in, {@code null} for the workspace of the source file
  * @param increase the version part to increase
  */

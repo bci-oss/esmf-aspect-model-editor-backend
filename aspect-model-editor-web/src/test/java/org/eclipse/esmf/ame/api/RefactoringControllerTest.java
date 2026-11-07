@@ -42,7 +42,7 @@ class RefactoringControllerTest {
    private static final ChangedFile MOVEMENT = new ChangedFile( "org.example", "1.0.0", "Movement.ttl",
          "/models/org.example/1.0.0/Movement.ttl", false );
    private static final RefactoringHistoryEntry ENTRY = new RefactoringHistoryEntry( "id", "Rename speed to velocity", 1L, List.of(),
-         List.of( MOVEMENT ), List.of() );
+         List.of( MOVEMENT ), List.of(), RENAME );
 
    private RefactoringService refactoringService;
    private RefactoringController refactoringController;

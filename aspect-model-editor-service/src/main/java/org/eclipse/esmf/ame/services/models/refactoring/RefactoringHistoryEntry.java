@@ -16,6 +16,7 @@ package org.eclipse.esmf.ame.services.models.refactoring;
 import java.util.List;
 
 import io.micronaut.core.annotation.Introspected;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 
 /**
@@ -27,6 +28,7 @@ import io.micronaut.serde.annotation.Serdeable;
  * @param created the files that were created
  * @param modified the files that were modified
  * @param removed the files that were removed
+ * @param request the request the refactoring was applied with; {@code null} for refactorings recorded before it was stored
  */
 @Serdeable
 @Introspected
@@ -36,7 +38,8 @@ public record RefactoringHistoryEntry(
       long timestamp,
       List<ChangedFile> created,
       List<ChangedFile> modified,
-      List<ChangedFile> removed
+      List<ChangedFile> removed,
+      @Nullable RefactoringRequest request
 ) {
    public RefactoringHistoryEntry {
       created = created == null ? List.of() : List.copyOf( created );

@@ -26,6 +26,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -64,6 +65,7 @@ import org.eclipse.esmf.aspectmodel.edit.change.MoveElementToOtherNamespaceNewFi
 import org.eclipse.esmf.aspectmodel.edit.change.MoveRenameAspectModelFile;
 import org.eclipse.esmf.aspectmodel.edit.change.RenameElement;
 import org.eclipse.esmf.aspectmodel.edit.change.RenameNamespace;
+import org.eclipse.esmf.aspectmodel.edit.change.RenameUrn;
 import org.eclipse.esmf.aspectmodel.loader.AspectModelLoader;
 import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 import org.eclipse.esmf.aspectmodel.urn.UrnSyntaxException;
@@ -73,6 +75,8 @@ import org.eclipse.esmf.metamodel.impl.DefaultNamespace;
 
 import io.micronaut.core.annotation.Nullable;
 import jakarta.inject.Singleton;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.RDFNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -145,8 +149,8 @@ public class RefactoringService {
 
          progressTracker.enter( RefactoringPhase.WRITING,
                preview.created().size() + preview.modified().size() + preview.removed().size() );
-         final RefactoringHistoryEntry entry = historyService.record( preview.description(), preview.created(), preview.modified(),
-               preview.removed(), () -> write( refactoring.changeManager(), preview.removed() ) );
+         final RefactoringHistoryEntry entry = historyService.record( preview.description(), request, preview.created(),
+               preview.modified(), preview.removed(), () -> write( refactoring.changeManager(), preview.removed() ) );
          resolutionStrategy.invalidate();
          LOG.info( "Applied refactoring '{}'", preview.description() );
          return entry;
@@ -211,6 +215,7 @@ public class RefactoringService {
          case RENAME_NAMESPACE -> planner.renameNamespace();
          case NEW_VERSION -> planner.newVersion();
          case RENAME_FILE -> planner.renameFile();
+         case MOVE_FILE -> planner.moveFile();
       };
 
       progressTracker.enter( RefactoringPhase.PLANNING, workspace.files().size() );
@@ -426,10 +431,7 @@ public class RefactoringService {
          final String version = required( request.version(), "version" );
          final String fileName = required( request.fileName(), "fileName" );
          final String newName = required( request.newName(), "newName" );
-         final WorkspaceFile file = filesOf( namespace, version, request.source() ).stream()
-               .filter( candidate -> candidate.fileName().equals( fileName ) )
-               .findFirst()
-               .orElseThrow( () -> new NoSuchElementException( "Aspect Model file not found: " + namespace + ":" + version + "/" + fileName ) );
+         final WorkspaceFile file = fileOf( namespace, version, fileName );
          final Path target = filePathResolver.resolveModelFile( file.root(), namespace, version, newName );
          if ( target.equals( file.path() ) ) {
             throw new IllegalArgumentException( "The file name is unchanged" );
@@ -438,6 +440,111 @@ public class RefactoringService {
 
          description = "Rename " + fileName + " to " + newName;
          return new MoveRenameAspectModelFile( file.path().toUri(), target.toUri() );
+      }
+
+      /**
+       * Moves a file into another namespace version: its elements get URNs of the target namespace, all references to them are
+       * updated and the files using them get a prefix for the target namespace.
+       */
+      Change moveFile() {
+         final String namespace = required( request.namespace(), "namespace" );
+         final String version = required( request.version(), "version" );
+         final String fileName = required( request.fileName(), "fileName" );
+         final String targetNamespace = required( request.targetNamespace(), "targetNamespace" );
+         final String targetVersion = required( request.targetVersion(), "targetVersion" );
+         final String targetFileName = Optional.ofNullable( request.targetFileName() ).filter( name -> !name.isBlank() ).orElse( fileName );
+         final AspectModelUrn from = namespaceUrn( namespace, version );
+         final AspectModelUrn to = namespaceUrn( targetNamespace, targetVersion );
+         if ( from.equals( to ) && targetFileName.equals( fileName ) ) {
+            throw new IllegalArgumentException( "The namespace and the name of the file are unchanged" );
+         }
+         final WorkspaceFile file = fileOf( namespace, version, fileName );
+         final URI target = requireAbsent(
+               filePathResolver.resolveModelFile( file.root(), targetNamespace, targetVersion, targetFileName ) ).toUri();
+
+         description = "Move " + fileName + " to " + targetNamespace + ":" + targetVersion + "/" + targetFileName;
+         final List<Change> changes = new ArrayList<>();
+         changes.add( new MoveRenameAspectModelFile( file.path().toUri(), target ) );
+         if ( from.equals( to ) ) {
+            return new ChangeGroup( description, changes );
+         }
+
+         final AspectModelFile movedFile = aspectModelFile( file.path() );
+         final Map<String, AspectModelUrn> renamed = new LinkedHashMap<>();
+         movedFile.elements().stream()
+               .filter( element -> !element.isAnonymous() && element.urn().getUrnPrefix().equals( from.getUrnPrefix() ) )
+               .map( ModelElement::urn )
+               .forEach( urn -> {
+                  final AspectModelUrn newUrn = urn( to.getUrnPrefix() + urn.getName() );
+                  requireElementAbsent( newUrn );
+                  renamed.put( urn.toString(), newUrn );
+               } );
+         renamed.forEach( ( urn, newUrn ) -> changes.add( new RenameUrn( urn( urn ), newUrn ) ) );
+         changes.add( new ChangeRdfPrefixes( target, movedFilePrefixes( movedFile, from, to, renamed.keySet() ) ) );
+         workspace.aspectModel().files().stream()
+               .filter( other -> other != movedFile && other.sourceLocation().isPresent() )
+               .filter( other -> !other.sourceModel().getNsPrefixMap().containsValue( to.getUrnPrefix() ) )
+               .filter( other -> referencedUris( other.sourceModel() ).anyMatch( renamed::containsKey ) )
+               .forEach( other -> changes.add( new ChangeRdfPrefixes( normalized( other.sourceUri() ),
+                     Map.of( uniquePrefix( other.sourceModel(), targetNamespace ), to.getUrnPrefix() ) ) ) );
+         return new ChangeGroup( description, changes );
+      }
+
+      /**
+       * The prefixes of the old namespace point to the target namespace in the moved file. If it still references elements that
+       * remain in the old namespace, it gets a new prefix for the old namespace.
+       */
+      private static Map<String, String> movedFilePrefixes( final AspectModelFile movedFile, final AspectModelUrn from,
+            final AspectModelUrn to, final Set<String> movedUrns ) {
+         final Model model = movedFile.sourceModel();
+         final Map<String, String> prefixes = new LinkedHashMap<>();
+         model.getNsPrefixMap().forEach( ( prefix, uri ) -> {
+            if ( uri.equals( from.getUrnPrefix() ) ) {
+               prefixes.put( prefix, to.getUrnPrefix() );
+            }
+         } );
+         if ( prefixes.isEmpty() ) {
+            prefixes.put( uniquePrefix( model, to.getNamespaceMainPart() ), to.getUrnPrefix() );
+         }
+         final boolean referencesOldNamespace = referencedUris( model )
+               .anyMatch( uri -> uri.startsWith( from.getUrnPrefix() ) && !movedUrns.contains( uri ) );
+         if ( referencesOldNamespace ) {
+            prefixes.put( uniquePrefix( model, from.getNamespaceMainPart() ), from.getUrnPrefix() );
+         }
+         return prefixes;
+      }
+
+      /** A prefix derived from the last segment of the namespace that is not used in the model yet, e.g. {@code example2}. */
+      private static String uniquePrefix( final Model model, final String namespace ) {
+         final String segment = namespace.substring( namespace.lastIndexOf( '.' ) + 1 ).replaceAll( "[^A-Za-z0-9_-]", "" );
+         final String base = segment.isEmpty() || !Character.isLetter( segment.charAt( 0 ) ) ? "ns" : segment;
+         String prefix = base;
+         for ( int i = 2; model.getNsPrefixURI( prefix ) != null; i++ ) {
+            prefix = base + i;
+         }
+         return prefix;
+      }
+
+      private static Stream<String> referencedUris( final Model model ) {
+         return model.listStatements().toList().stream()
+               .flatMap( statement -> Stream.of( statement.getSubject(), statement.getPredicate(), statement.getObject() ) )
+               .filter( RDFNode::isURIResource )
+               .map( node -> node.asResource().getURI() );
+      }
+
+      private WorkspaceFile fileOf( final String namespace, final String version, final String fileName ) {
+         return filesOf( namespace, version, request.source() ).stream()
+               .filter( candidate -> candidate.fileName().equals( fileName ) )
+               .findFirst()
+               .orElseThrow( () -> new NoSuchElementException( "Aspect Model file not found: " + namespace + ":" + version + "/" + fileName ) );
+      }
+
+      private AspectModelFile aspectModelFile( final Path path ) {
+         final URI location = normalized( path.toUri() );
+         return workspace.aspectModel().files().stream()
+               .filter( file -> file.sourceLocation().isPresent() && normalized( file.sourceUri() ).equals( location ) )
+               .findFirst()
+               .orElseThrow( () -> new NoSuchElementException( "Aspect Model file not loaded: " + path ) );
       }
 
       private AspectModelUrn elementUrn() {

@@ -20,4 +20,10 @@ tests {
     expect(body[0].id).to.equal(bru.getVar("refactoringId"));
     expect(body[0].description).to.equal("Rename sharedProperty to renamedProperty");
   });
+
+  test("The request of the refactoring is stored to offer its revert", function() {
+    const request = res.getBody()[0].request;
+    expect(request.type).to.equal("RENAME_ELEMENT");
+    expect(request.newName).to.equal("renamedProperty");
+  });
 }
