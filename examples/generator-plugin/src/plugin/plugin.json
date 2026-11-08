@@ -1,0 +1,27 @@
+{
+  "id": "example-generator",
+  "name": "Example Generator",
+  "version": "${plugin.version}",
+  "pluginApiVersion": 1,
+  "description": "Example generator plugin: generates a JSON description of the Aspect of the open Aspect Model.",
+  "frontend": {
+    "entry": "frontend/main.js",
+    "element": "ame-plugin-example-generator"
+  },
+  "contributions": {
+    "commands": [
+      {
+        "id": "generate",
+        "kind": "generate",
+        "label": "Generate as JSON description...",
+        "labels": {
+          "de": "Als JSON-Beschreibung generieren...",
+          "zh": "生成 JSON 描述..."
+        },
+        "icon": "output",
+        "placements": ["menu", "toolbar"],
+        "menu": "generate"
+      }
+    ]
+  }
+}

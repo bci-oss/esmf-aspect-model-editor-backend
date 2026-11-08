@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2026 Robert Bosch Manufacturing Solutions GmbH
+  ~
+  ~ See the AUTHORS file(s) distributed with this work for
+  ~ additional information regarding authorship.
+  ~
+  ~ This Source Code Form is subject to the terms of the Mozilla Public
+  ~ License, v. 2.0. If a copy of the MPL was not distributed with this
+  ~ file, You can obtain one at https://mozilla.org/MPL/2.0/.
+  ~
+  ~ SPDX-License-Identifier: MPL-2.0
+  -->
+
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+   <modelVersion>4.0.0</modelVersion>
+
+   <parent>
+      <groupId>org.eclipse.esmf</groupId>
+      <artifactId>aspect-model-editor-parent</artifactId>
+      <version>DEV-SNAPSHOT</version>
+      <relativePath>../../pom.xml</relativePath>
+   </parent>
+
+   <artifactId>aspect-model-editor-example-import-plugin</artifactId>
+   <name>ESMF Aspect Model Editor Example Plugin: Import</name>
+   <description>
+      Example of an import plugin: it creates Aspect Models from a JSON description of an Aspect. It shows the complete
+      plugin layout: a backend with its own libraries, a user interface as Web Component and the manifest with an import
+      command. The build creates the installable archive target/example-import-${plugin.version}.zip.
+   </description>
+
+   <properties>
+      <plugin.version>1.0.0</plugin.version>
+      <maven.deploy.skip>true</maven.deploy.skip>
+      <maven.install.skip>true</maven.install.skip>
+      <skip.generated.bom>true</skip.generated.bom>
+   </properties>
+
+   <dependencies>
+      <!-- Provided by the editor at runtime; must not be packaged into the plugin -->
+      <dependency>
+         <groupId>org.eclipse.esmf</groupId>
+         <artifactId>aspect-model-editor-plugin-api</artifactId>
+         <scope>provided</scope>
+      </dependency>
+      <!-- Packaged into backend/lib; the plugin uses its own copy independent of the editor -->
+      <dependency>
+         <groupId>com.fasterxml.jackson.core</groupId>
+         <artifactId>jackson-databind</artifactId>
+      </dependency>
+
+      <!-- Verifies that the generated models are valid Aspect Models -->
+      <dependency>
+         <groupId>org.eclipse.esmf</groupId>
+         <artifactId>esmf-aspect-model-validator</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <groupId>org.junit.jupiter</groupId>
+         <artifactId>junit-jupiter-engine</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <!-- SLF4J provider for the tests; without it SLF4J warns that no provider was found -->
+      <dependency>
+         <groupId>ch.qos.logback</groupId>
+         <artifactId>logback-classic</artifactId>
+         <scope>test</scope>
+      </dependency>
+   </dependencies>
+
+   <build>
+      <plugins>
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>3.7.1</version>
+            <executions>
+               <execution>
+                  <id>plugin-archive</id>
+                  <phase>package</phase>
+                  <goals>
+                     <goal>single</goal>
+                  </goals>
+                  <configuration>
+                     <finalName>example-import-${plugin.version}</finalName>
+                     <appendAssemblyId>false</appendAssemblyId>
+                     <attach>false</attach>
+                     <descriptors>
+                        <descriptor>src/assembly/plugin.xml</descriptor>
+                     </descriptors>
+                  </configuration>
+               </execution>
+            </executions>
+         </plugin>
+      </plugins>
+   </build>
+</project>

@@ -40,6 +40,7 @@ public class ApplicationSettings {
    private static final String WORKSPACE_CONFIG_FILE = "workspaces.json";
    private static final String WORKSPACE_CONFIG_PATH = ASPECT_MODEL_PATH + File.separator + WORKSPACE_CONFIG_FILE;
    private static final String REFACTORING_HISTORY_PATH = ASPECT_MODEL_PATH + File.separator + "refactoring-history";
+   private static final String PLUGINS_PATH = ASPECT_MODEL_PATH + File.separator + "plugins";
 
    private ApplicationSettings() {
    }
@@ -98,6 +99,25 @@ public class ApplicationSettings {
          throw new CreateFileException( String.format(
                "Unable to create the refactoring history directory at: %s.",
                REFACTORING_HISTORY_PATH ), e );
+      }
+   }
+
+   /**
+    * Gets the directory installed plugins and their data are stored in.
+    * Creates the directory if it doesn't exist.
+    *
+    * @return the path to the plugins directory
+    * @throws CreateFileException if the directory cannot be created
+    */
+   public static Path getPluginsPath() {
+      try {
+         final Path pluginsPath = Path.of( PLUGINS_PATH );
+         FileUtils.forceMkdir( pluginsPath.toFile() );
+         return pluginsPath;
+      } catch ( final IOException e ) {
+         throw new CreateFileException( String.format(
+               "Unable to create the plugins directory at: %s.",
+               PLUGINS_PATH ), e );
       }
    }
 }

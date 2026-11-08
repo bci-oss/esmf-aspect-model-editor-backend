@@ -1,0 +1,13 @@
+{
+  "namespace": "org.example.movement",
+  "version": "1.0.0",
+  "aspect": {
+    "name": "Movement",
+    "description": "Describes the movement of a vehicle.",
+    "properties": [
+      { "name": "speed", "type": "float", "description": "The current speed of the vehicle." },
+      { "name": "moving", "type": "boolean", "description": "Whether the vehicle is moving." },
+      { "name": "timestamp", "type": "dateTime" }
+    ]
+  }
+}

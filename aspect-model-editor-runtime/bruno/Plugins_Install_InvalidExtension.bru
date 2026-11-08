@@ -1,0 +1,25 @@
+meta {
+  name: Plugins_Install_InvalidExtension
+  type: http
+  seq: 128
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/plugins
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  file: @file(./TestingFiles/Movement.ttl)
+}
+
+tests {
+  test("Status code is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("Error message explains that plugins are ZIP archives", function() {
+    expect(res.getBody().error.message).to.equal("The selected file 'Movement.ttl' is not a plugin. Plugins are ZIP archives.");
+  });
+}

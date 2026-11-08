@@ -1,0 +1,17 @@
+meta {
+  name: Plugins_Uninstall_NotFound
+  type: http
+  seq: 137
+}
+
+delete {
+  url: http://localhost:{{port}}/ame/api/plugins/bruno-test
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 404", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+}

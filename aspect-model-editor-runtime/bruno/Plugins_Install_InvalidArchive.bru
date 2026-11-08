@@ -1,0 +1,25 @@
+meta {
+  name: Plugins_Install_InvalidArchive
+  type: http
+  seq: 129
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/plugins
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  file: @file(./TestingFiles/TestPackage.zip)
+}
+
+tests {
+  test("Status code is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("Error message names the missing manifest", function() {
+    expect(res.getBody().error.message).to.include("plugin.json");
+  });
+}

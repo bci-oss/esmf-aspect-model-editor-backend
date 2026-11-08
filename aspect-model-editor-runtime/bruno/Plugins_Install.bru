@@ -1,0 +1,42 @@
+meta {
+  name: Plugins_Install
+  type: http
+  seq: 127
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/plugins
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  file: @file(./TestingFiles/TestPlugin.zip)
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("The plugin is enabled and runs after a restart", function() {
+    const plugin = res.getBody();
+    expect(plugin.id).to.equal("bruno-test");
+    expect(plugin.version).to.equal("1.0.0");
+    expect(plugin.enabled).to.equal(true);
+    expect(plugin.state).to.equal("INACTIVE");
+    expect(plugin.restartRequired).to.equal(true);
+  });
+
+  test("The commands are listed with their defaults", function() {
+    const [open, summary] = res.getBody().commands;
+    expect(open.id).to.equal("open");
+    expect(open.kind).to.equal("import");
+    expect(open.placements).to.eql(["menu"]);
+    expect(open.menu).to.equal("file/import");
+    expect(open.icon).to.equal("upload_file");
+    expect(summary.kind).to.equal("generate");
+    expect(summary.placements).to.eql(["menu", "toolbar"]);
+    expect(summary.menu).to.equal("generate");
+  });
+}

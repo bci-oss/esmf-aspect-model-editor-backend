@@ -1,0 +1,22 @@
+meta {
+  name: Plugins_List
+  type: http
+  seq: 126
+}
+
+get {
+  url: http://localhost:{{port}}/ame/api/plugins
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("The supported plugin API version is reported", function() {
+    expect(res.getBody().pluginApiVersion).to.equal(1);
+    expect(res.getBody().plugins).to.be.an("array");
+  });
+}

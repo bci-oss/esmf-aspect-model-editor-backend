@@ -1,0 +1,30 @@
+meta {
+  name: Plugins_RunGenerator_NotRunning
+  type: http
+  seq: 133
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/plugins/bruno-test/generators/summary
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "model": {
+      "namespace": "org.eclipse.examples",
+      "version": "1.0.0",
+      "fileName": "Movement.ttl",
+      "content": "@prefix : <urn:samm:org.eclipse.examples:1.0.0#> ."
+    },
+    "selectedElement": "urn:samm:org.eclipse.examples:1.0.0#Movement",
+    "options": { "format": "json" }
+  }
+}
+
+tests {
+  test("Status code is 409 as the plugin is not running", function() {
+    expect(res.getStatus()).to.equal(409);
+  });
+}

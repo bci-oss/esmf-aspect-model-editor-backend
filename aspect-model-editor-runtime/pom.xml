@@ -158,6 +158,8 @@
                            <manifestEntries>
                               <Main-Class>${main.class}</Main-Class>
                               <Multi-Release>true</Multi-Release>
+                              <!-- Native libraries (e.g. zstd-jni) are loaded without the warning of JDK 24+ -->
+                              <Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
                            </manifestEntries>
                         </transformer>
                      </transformers>

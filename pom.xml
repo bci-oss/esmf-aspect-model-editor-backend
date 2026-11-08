@@ -52,11 +52,14 @@
    </scm>
 
    <modules>
+      <module>aspect-model-editor-plugin-api</module>
       <module>aspect-model-editor-core</module>
       <module>aspect-model-editor-validation</module>
       <module>aspect-model-editor-service</module>
       <module>aspect-model-editor-web</module>
       <module>aspect-model-editor-runtime</module>
+      <module>examples/import-plugin</module>
+      <module>examples/generator-plugin</module>
    </modules>
 
    <properties>
@@ -136,6 +139,11 @@
    <dependencyManagement>
       <dependencies>
          <!-- Multi module dependencies -->
+         <dependency>
+            <groupId>org.eclipse.esmf</groupId>
+            <artifactId>aspect-model-editor-plugin-api</artifactId>
+            <version>${project.version}</version>
+         </dependency>
          <dependency>
             <groupId>org.eclipse.esmf</groupId>
             <artifactId>aspect-model-editor-core</artifactId>

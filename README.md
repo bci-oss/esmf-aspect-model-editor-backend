@@ -20,6 +20,7 @@ SPDX-License-Identifier: MPL-2.0
 - [Setup](#setup)
 - [Build and run](#build-and-run)
 - [Desktop integration](#desktop-integration)
+- [Plugins](#plugins)
 - [Release](#release)
 - [Further documentation](#further-documentation)
 - [License](#license)
@@ -52,8 +53,13 @@ Are you having trouble with Aspect Model Editor backend? We want to help!
 
 ```
 mvn clean package
-mvn exec:java -pl aspect-model-editor-runtime
+java --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow \
+     -jar aspect-model-editor-runtime/target/aspect-model-editor-runtime-DEV-SNAPSHOT.jar
 ```
+
+The JVM options are the same as in the packaged app image of the desktop app. Without them, JDK 24+ prints warnings
+when native libraries (`zstd-jni`) or `sun.misc.Unsafe` (GraalVM Truffle) are used. IntelliJ IDEA users can start the
+backend with the shared run configuration `AME Backend` (`.run/AME Backend.run.xml`), which sets these options.
 
 ## Desktop integration
 
@@ -77,6 +83,30 @@ Example:
 AME_AUTH_TOKEN=secret java -Dmicronaut.server.port=-1 -jar aspect-model-editor-runtime/target/aspect-model-editor-runtime-DEV-SNAPSHOT.jar
 curl -H "X-AME-Token: secret" http://127.0.0.1:<port>/ame/api/models/storage-path
 ```
+
+## Plugins
+
+Plugins extend the editor with backend functionality (Java) and a user interface (a Web Component), packed into a
+`.zip` archive that users install in the settings of the editor. Installed plugins are stored in
+`~/aspect-model-editor/plugins` and loaded when the backend starts, each with its own class loader that only shares the plugin API, the SLF4J API and the
+Java runtime with the editor.
+
+| Module / path                                                             | Content                                                                                         |
+|---------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|
+| [`aspect-model-editor-plugin-api`](aspect-model-editor-plugin-api)        | The API plugins implement (`AmePlugin`, `ModelImporter`, `ModelGenerator`, `PluginAction`, ...), without dependencies |
+| `aspect-model-editor-service/.../services/plugins`                        | Installation, validation of `plugin.json`, storage and loading of plugins                      |
+| `/ame/api/plugins`                                                        | REST endpoints to list, install, enable/disable and remove plugins and to run their importers, generators and actions |
+| [`examples/import-plugin`](examples/import-plugin)                        | Example import plugin (JSON description → Aspect Model) with backend part, user interface and Maven assembly; sample input `samples/movement.json` |
+| [`examples/generator-plugin`](examples/generator-plugin)                  | Example generator plugin (Aspect Model → JSON description) for menu and toolbar; sample model `samples/Movement.ttl` and its output `samples/Movement.description.json` |
+
+Plugins contribute two kinds of commands: **importers** create new Aspect Models from external files
+(`POST /plugins/{id}/importers/{importer}`, multipart) and **generators** create files from the current Aspect Model, which
+they get read-only (`POST /plugins/{id}/generators/{generator}`, JSON). Plugins cannot register REST endpoints of their own;
+additional backend logic is reachable through actions (`POST /plugins/{id}/actions/{action}`, any JSON). This keeps the
+contract fixed, token-protected and independent of the backend framework.
+
+The archive format, `plugin.json` and the host API of the user interface are described in the
+[Plugins section of the editor README](https://github.com/eclipse-esmf/esmf-aspect-model-editor#plugins).
 
 ## Release
 

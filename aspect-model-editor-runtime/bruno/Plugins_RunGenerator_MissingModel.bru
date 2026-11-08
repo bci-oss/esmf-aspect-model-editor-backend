@@ -1,0 +1,23 @@
+meta {
+  name: Plugins_RunGenerator_MissingModel
+  type: http
+  seq: 134
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/plugins/bruno-test/generators/summary
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "options": {}
+  }
+}
+
+tests {
+  test("Status code is 400 as the Aspect Model is missing", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+}

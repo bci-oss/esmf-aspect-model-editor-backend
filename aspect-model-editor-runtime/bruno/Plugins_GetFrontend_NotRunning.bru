@@ -1,0 +1,17 @@
+meta {
+  name: Plugins_GetFrontend_NotRunning
+  type: http
+  seq: 131
+}
+
+get {
+  url: http://localhost:{{port}}/ame/api/plugins/bruno-test/frontend/main.js
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 404 as the plugin runs after a restart only", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+}

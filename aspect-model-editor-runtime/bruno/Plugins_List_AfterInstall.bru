@@ -1,0 +1,23 @@
+meta {
+  name: Plugins_List_AfterInstall
+  type: http
+  seq: 130
+}
+
+get {
+  url: http://localhost:{{port}}/ame/api/plugins
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("The installed plugin is listed and a restart is required", function() {
+    const body = res.getBody();
+    expect(body.plugins.map(plugin => plugin.id)).to.include("bruno-test");
+    expect(body.restartRequired).to.equal(true);
+  });
+}

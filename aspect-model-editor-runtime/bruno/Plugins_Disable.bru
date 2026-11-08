@@ -1,0 +1,28 @@
+meta {
+  name: Plugins_Disable
+  type: http
+  seq: 135
+}
+
+put {
+  url: http://localhost:{{port}}/ame/api/plugins/bruno-test/enabled
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "enabled": false
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("The plugin is disabled", function() {
+    expect(res.getBody().enabled).to.equal(false);
+    expect(res.getBody().restartRequired).to.equal(false);
+  });
+}

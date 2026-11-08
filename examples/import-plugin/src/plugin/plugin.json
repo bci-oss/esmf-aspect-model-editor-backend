@@ -1,0 +1,27 @@
+{
+  "id": "example-import",
+  "name": "Example Import",
+  "version": "${plugin.version}",
+  "pluginApiVersion": 1,
+  "description": "Example import plugin: creates Aspect Models from a JSON description of an Aspect.",
+  "frontend": {
+    "entry": "frontend/main.js",
+    "element": "ame-plugin-example-import"
+  },
+  "contributions": {
+    "commands": [
+      {
+        "id": "import",
+        "kind": "import",
+        "label": "Import from JSON description...",
+        "labels": {
+          "de": "Aus JSON-Beschreibung importieren...",
+          "zh": "从 JSON 描述导入..."
+        },
+        "icon": "upload_file",
+        "placements": ["menu", "toolbar"],
+        "menu": "file/import"
+      }
+    ]
+  }
+}
