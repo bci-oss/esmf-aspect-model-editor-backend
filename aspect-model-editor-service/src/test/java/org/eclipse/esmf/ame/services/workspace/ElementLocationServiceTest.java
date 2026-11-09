@@ -46,9 +46,9 @@ class ElementLocationServiceTest {
       final Path provider = providerA( workspace );
 
       final Optional<ElementLocation> property = service.locate(
-            AspectModelUrn.fromUrn( "urn:samm:org.example.a:1.0.0#sharedProperty" ) );
+            AspectModelUrn.fromUrn( "urn:samm:org.example.a:1.0.0#sharedProperty" ), null );
       final Optional<ElementLocation> characteristic = service.locate(
-            AspectModelUrn.fromUrn( "urn:samm:org.example.a:1.0.0#SharedCharacteristic" ) );
+            AspectModelUrn.fromUrn( "urn:samm:org.example.a:1.0.0#SharedCharacteristic" ), null );
 
       final String path = provider.toAbsolutePath().normalize().toString();
       assertEquals( Optional.of( new ElementLocation( path, PREFIX_LINES + 2, 1 ) ), property );
@@ -60,7 +60,7 @@ class ElementLocationServiceTest {
       providerA( workspace );
       final Path consumer = consumerB( workspace );
 
-      final Optional<ElementLocation> location = service.locate( AspectModelUrn.fromUrn( "urn:samm:org.example.b:1.0.0#Consumer" ) );
+      final Optional<ElementLocation> location = service.locate( AspectModelUrn.fromUrn( "urn:samm:org.example.b:1.0.0#Consumer" ), null );
 
       assertTrue( location.isPresent() );
       assertEquals( consumer.toAbsolutePath().normalize().toString(), location.get().path() );
@@ -72,8 +72,8 @@ class ElementLocationServiceTest {
       providerA( workspace );
       consumerB( workspace );
 
-      assertTrue( service.locate( AspectModelUrn.fromUrn( "urn:samm:org.example.b:1.0.0#sharedProperty" ) ).isEmpty() );
-      assertTrue( service.locate( AspectModelUrn.fromUrn( "urn:samm:org.example.c:1.0.0#Unknown" ) ).isEmpty() );
+      assertTrue( service.locate( AspectModelUrn.fromUrn( "urn:samm:org.example.b:1.0.0#sharedProperty" ), null ).isEmpty() );
+      assertTrue( service.locate( AspectModelUrn.fromUrn( "urn:samm:org.example.c:1.0.0#Unknown" ), null ).isEmpty() );
    }
 
    @Test
@@ -90,7 +90,7 @@ class ElementLocationServiceTest {
 
       assertEquals( second.toAbsolutePath().normalize().toString(), service.locate( urn, "AspectB.ttl" ).orElseThrow().path() );
       assertEquals( first.toAbsolutePath().normalize().toString(), service.locate( urn, "AspectA.ttl" ).orElseThrow().path() );
-      assertEquals( first.toAbsolutePath().normalize().toString(), service.locate( urn ).orElseThrow().path() );
+      assertEquals( first.toAbsolutePath().normalize().toString(), service.locate( urn, null ).orElseThrow().path() );
    }
 
    @Test

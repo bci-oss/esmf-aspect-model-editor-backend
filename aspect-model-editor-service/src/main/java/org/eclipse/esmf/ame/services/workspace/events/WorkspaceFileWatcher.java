@@ -88,12 +88,7 @@ public class WorkspaceFileWatcher {
     * Marks the start of an operation of the backend that may write model files.
     */
    public void beginOwnWrite() {
-      lock.lock();
-      try {
-         ownWrites++;
-      } finally {
-         lock.unlock();
-      }
+      whileLocked( () -> ownWrites++ );
    }
 
    /**
@@ -101,38 +96,39 @@ public class WorkspaceFileWatcher {
     * current state of the workspaces is taken over without publishing it.
     */
    public void endOwnWrite() {
-      lock.lock();
-      try {
+      whileLocked( () -> {
          ownWrites = Math.max( 0, ownWrites - 1 );
          if ( ownWrites == 0 ) {
             scanSafely();
          }
-      } finally {
-         lock.unlock();
-      }
+      } );
    }
 
    /**
     * Publishes the changes since the previous scan, unless the backend is writing itself.
     */
    void poll() {
-      lock.lock();
-      try {
+      whileLocked( () -> {
          if ( ownWrites == 0 ) {
             scanSafely().ifPresent( changes -> broadcaster.publish( WorkspaceEvent.filesChanged( changes ) ) );
          }
-      } finally {
-         lock.unlock();
-      }
+      } );
    }
 
    /**
     * Takes over the current state of the workspaces without publishing it.
     */
    void absorb() {
+      whileLocked( this::scanSafely );
+   }
+
+   /**
+    * Runs the action exclusively: scans and changes of the own write counter never overlap.
+    */
+   private void whileLocked( final Runnable action ) {
       lock.lock();
       try {
-         scanSafely();
+         action.run();
       } finally {
          lock.unlock();
       }

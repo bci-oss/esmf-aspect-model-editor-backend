@@ -42,16 +42,6 @@ public class ElementLocationService {
    }
 
    /**
-    * Locates the declaration of a model element in the workspace sources.
-    *
-    * @param urn the URN of the element
-    * @return the location, empty if no file of the element's namespace version declares it
-    */
-   public Optional<ElementLocation> locate( final AspectModelUrn urn ) {
-      return locate( urn, null );
-   }
-
-   /**
     * Locates the declaration of a model element in the workspace sources. If several files of the element's namespace
     * version declare it, the preferred file wins.
     *
