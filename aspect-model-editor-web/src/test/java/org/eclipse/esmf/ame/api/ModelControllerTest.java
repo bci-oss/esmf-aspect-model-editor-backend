@@ -54,8 +54,10 @@ import org.eclipse.esmf.ame.services.models.FileEntry;
 import org.eclipse.esmf.ame.services.models.FileInformation;
 import org.eclipse.esmf.ame.services.models.MigrationResult;
 import org.eclipse.esmf.ame.services.models.Version;
+import org.eclipse.esmf.ame.services.models.workspace.ElementLocation;
 import org.eclipse.esmf.ame.services.models.workspace.ElementUsage;
 import org.eclipse.esmf.ame.services.models.workspace.ElementUsageReport;
+import org.eclipse.esmf.ame.services.workspace.ElementLocationService;
 import org.eclipse.esmf.ame.services.workspace.ElementUsageService;
 import org.eclipse.esmf.ame.services.workspace.WorkspaceCleanupService;
 import org.eclipse.esmf.ame.validation.model.ViolationReport;
@@ -77,6 +79,7 @@ class ModelControllerTest {
    private FileNameSanitizer fileNameSanitizer;
    private WorkspaceCleanupService workspaceCleanupService;
    private ElementUsageService elementUsageService;
+   private ElementLocationService elementLocationService;
    private ModelController controller;
 
    private static final String VALID_URN = "urn:samm:org.eclipse.esmf.example:1.0.0#Movement";
@@ -91,6 +94,7 @@ class ModelControllerTest {
       fileNameSanitizer = new FileNameSanitizer();
       workspaceCleanupService = mock( WorkspaceCleanupService.class );
       elementUsageService = mock( ElementUsageService.class );
+      elementLocationService = mock( ElementLocationService.class );
 
       controller = new ModelController(
             modelService,
@@ -100,7 +104,8 @@ class ModelControllerTest {
             aspectModelMigrator,
             fileNameSanitizer,
             workspaceCleanupService,
-            elementUsageService
+            elementUsageService,
+            elementLocationService
       );
    }
 
@@ -115,6 +120,30 @@ class ModelControllerTest {
 
       assertEquals( HttpStatus.OK, response.getStatus() );
       assertSame( report, response.body() );
+   }
+
+   @Test
+   void testGetLocation() {
+      final ElementLocation location = new ElementLocation( "/models/org.eclipse.esmf.example/1.0.0/Movement.ttl", 12, 1 );
+      when( elementLocationService.locate( AspectModelUrn.fromUrn( VALID_URN ), "Movement.ttl" ) ).thenReturn( Optional.of( location ) );
+
+      final HttpResponse<ElementLocation> response = controller.getLocation( Optional.of( VALID_URN ), Optional.of( "Movement.ttl" ) );
+
+      assertEquals( HttpStatus.OK, response.getStatus() );
+      assertSame( location, response.body() );
+   }
+
+   @Test
+   void testGetLocationOfUndeclaredElement() {
+      when( elementLocationService.locate( AspectModelUrn.fromUrn( VALID_URN ), null ) ).thenReturn( Optional.empty() );
+
+      assertEquals( HttpStatus.NOT_FOUND, controller.getLocation( Optional.of( VALID_URN ), Optional.empty() ).getStatus() );
+   }
+
+   @Test
+   void testGetLocationWithInvalidUrn() {
+      assertThrows( FileNotFoundException.class, () -> controller.getLocation( Optional.empty(), Optional.empty() ) );
+      assertThrows( InvalidAspectModelException.class, () -> controller.getLocation( Optional.of( "not-a-urn" ), Optional.empty() ) );
    }
 
    @Test

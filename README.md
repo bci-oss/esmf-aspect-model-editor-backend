@@ -20,6 +20,7 @@ SPDX-License-Identifier: MPL-2.0
 - [Setup](#setup)
 - [Build and run](#build-and-run)
 - [Desktop integration](#desktop-integration)
+- [External editors (VS Code)](#external-editors-vs-code)
 - [Plugins](#plugins)
 - [Release](#release)
 - [Further documentation](#further-documentation)
@@ -83,6 +84,29 @@ Example:
 AME_AUTH_TOKEN=secret java -Dmicronaut.server.port=-1 -jar aspect-model-editor-runtime/target/aspect-model-editor-runtime-DEV-SNAPSHOT.jar
 curl -H "X-AME-Token: secret" http://127.0.0.1:<port>/ame/api/models/storage-path
 ```
+
+## External editors (VS Code)
+
+Aspect Models can be edited in parallel in other editors, e.g. VS Code with the
+[ESMF extension](https://marketplace.visualstudio.com/items?itemName=eclipse-esmf.semantic-models). The backend supports
+this with two endpoints:
+
+| Endpoint                                     | Purpose                                                                                                                                  |
+|----------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
+| `GET /models/location` (header `aspect-model-urn`, optional query `fileName`) | The file and the 1-based line and column an element is declared in (`{path, line, column}`), so that it can be opened at its position; `404` if it is not declared in the workspace. If several files of the namespace version declare the element, `fileName` (e.g. the file of the model shown in the editor) decides. |
+| `GET /workspaces/events` (`text/event-stream`)     | Server-sent events about workspace files changed outside of the editor: `ready` on every (re)connect, `files-changed` with the `created`, `modified` and `removed` files, and a `heartbeat` every 15 seconds. |
+
+The file watcher polls the writable local workspaces (not the read-only GitHub sources) every
+`ame.workspace-watch.interval` (default `1s`) and compares size and modification time, and the content hash only if
+these changed. Polling is used on purpose instead of `java.nio.file.WatchService`: it behaves the same on Windows, Linux
+and macOS (where the JDK polls anyway), does not lock directories on Windows and needs no native libraries.
+
+Changes made through the REST API are not reported: the watcher absorbs the state of the workspace after every
+`POST`, `PUT`, `PATCH` or `DELETE` request. As a consequence, an external change saved while such a request is running
+is not reported either. Changes made while a client is disconnected are not reported; clients refresh fully on `ready`.
+
+As all endpoints, the event stream requires the token header (see above), so browsers have to read it with `fetch`
+instead of `EventSource`.
 
 ## Plugins
 

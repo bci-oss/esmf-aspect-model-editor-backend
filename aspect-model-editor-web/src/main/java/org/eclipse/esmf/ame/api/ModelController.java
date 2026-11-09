@@ -41,7 +41,9 @@ import org.eclipse.esmf.ame.services.models.FileEntry;
 import org.eclipse.esmf.ame.services.models.FileInformation;
 import org.eclipse.esmf.ame.services.models.MigrationResult;
 import org.eclipse.esmf.ame.services.models.Version;
+import org.eclipse.esmf.ame.services.models.workspace.ElementLocation;
 import org.eclipse.esmf.ame.services.models.workspace.ElementUsageReport;
+import org.eclipse.esmf.ame.services.workspace.ElementLocationService;
 import org.eclipse.esmf.ame.services.workspace.ElementUsageService;
 import org.eclipse.esmf.ame.services.workspace.WorkspaceCleanupService;
 import org.eclipse.esmf.ame.validation.model.ViolationReport;
@@ -76,6 +78,7 @@ public class ModelController {
    private final FileNameSanitizer fileNameSanitizer;
    private final WorkspaceCleanupService workspaceCleanupService;
    private final ElementUsageService elementUsageService;
+   private final ElementLocationService elementLocationService;
 
    public ModelController(
          final ModelService modelService,
@@ -85,7 +88,8 @@ public class ModelController {
          final AspectModelMigrator aspectModelMigrator,
          final FileNameSanitizer fileNameSanitizer,
          final WorkspaceCleanupService workspaceCleanupService,
-         final ElementUsageService elementUsageService ) {
+         final ElementUsageService elementUsageService,
+         final ElementLocationService elementLocationService ) {
       this.modelService = modelService;
       this.aspectModelReader = aspectModelReader;
       this.aspectModelWriter = aspectModelWriter;
@@ -94,6 +98,7 @@ public class ModelController {
       this.fileNameSanitizer = fileNameSanitizer;
       this.workspaceCleanupService = workspaceCleanupService;
       this.elementUsageService = elementUsageService;
+      this.elementLocationService = elementLocationService;
    }
 
    private AspectModelUrn parseAspectModelUrn( final Optional<String> urn ) {
@@ -161,6 +166,24 @@ public class ModelController {
    @Produces( MediaType.APPLICATION_JSON )
    public HttpResponse<ElementUsageReport> getUsage( @Header( ApplicationConstants.Headers.URN ) final Optional<String> urn ) {
       return HttpResponse.ok( elementUsageService.findUsages( parseAspectModelUrn( urn ) ) );
+   }
+
+   /**
+    * Returns the file and the 1-based line and column at which a model element is declared, e.g. to open the
+    * declaration in an external text editor.
+    *
+    * @param urn the Aspect Model URN header parameter in the format urn:samm:namespace:version#AspectModelElement
+    * @param fileName the file of the namespace version to look in first, e.g. the file of the model shown in the
+    *       editor; decides if several files declare the element
+    * @return the location, or 404 if no file of the element's namespace version declares it
+    */
+   @Get( uri = "location" )
+   @Produces( MediaType.APPLICATION_JSON )
+   public HttpResponse<ElementLocation> getLocation( @Header( ApplicationConstants.Headers.URN ) final Optional<String> urn,
+         @QueryValue( "fileName" ) final Optional<String> fileName ) {
+      return elementLocationService.locate( parseAspectModelUrn( urn ), fileName.orElse( null ) )
+            .<HttpResponse<ElementLocation>> map( HttpResponse::ok )
+            .orElseGet( HttpResponse::notFound );
    }
 
    private AspectModelResult getModelOrUnresolved( final AspectModelUrn aspectModelUrn ) {

@@ -230,8 +230,30 @@ public class WorkspaceReferenceService {
     *       unreadable file might define it
     */
    public Optional<Path> findDefiningFile( final String namespace, final String version, final String elementUri ) {
+      return findDefiningFile( namespace, version, elementUri, null );
+   }
+
+   /**
+    * Finds the file of a namespace version that defines the given element, checking the preferred file first. Files of
+    * a namespace version may define the same element, e.g. a copied Property; the preferred file then decides which
+    * one is meant.
+    *
+    * @param namespace the namespace, e.g. {@code org.eclipse.example}
+    * @param version the version, e.g. {@code 1.0.0}
+    * @param elementUri the URN of the element, e.g. {@code urn:samm:org.eclipse.example:1.0.0#property}
+    * @param preferredFileName the name of the file to check first, e.g. the file of the model shown in the editor;
+    *       {@code null} for none
+    * @return the defining file, empty if no file of the namespace version defines the element
+    * @throws RuntimeException the error of the first unreadable file if no file defines the element
+    */
+   public Optional<Path> findDefiningFile( final String namespace, final String version, final String elementUri,
+         final String preferredFileName ) {
       RuntimeException firstReadError = null;
-      final List<WorkspaceFile> candidates = listWorkspaceFiles().stream().filter( file -> file.isIn( namespace, version ) ).toList();
+      final List<WorkspaceFile> candidates = listWorkspaceFiles().stream()
+            .filter( file -> file.isIn( namespace, version ) )
+            // stable sort: the preferred file comes first, the others keep the resolution order of the sources
+            .sorted( Comparator.comparing( ( final WorkspaceFile file ) -> !file.fileName().equals( preferredFileName ) ) )
+            .toList();
       for ( final WorkspaceFile file : candidates ) {
          try {
             if ( definedUris( parse( file.path() ) ).contains( elementUri ) ) {
