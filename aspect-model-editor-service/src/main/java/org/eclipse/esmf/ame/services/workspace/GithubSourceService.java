@@ -479,9 +479,9 @@ public class GithubSourceService {
 
    /**
     * Uses the proxy of the {@code HTTPS_PROXY}/{@code HTTP_PROXY} environment variables, except for the hosts listed in
-    * {@code NO_PROXY}.
+    * {@code NO_PROXY}. Also used for the HTTP connections of the AI providers.
     */
-   static final class EnvironmentProxySelector extends ProxySelector {
+   public static final class EnvironmentProxySelector extends ProxySelector {
       private final Proxy proxy;
       private final List<String> noProxy;
 
@@ -490,7 +490,12 @@ public class GithubSourceService {
          this.noProxy = noProxy;
       }
 
-      static Optional<ProxySelector> fromEnvironment() {
+      /**
+       * Creates the proxy selector of the {@code HTTPS_PROXY}/{@code HTTP_PROXY} environment variables.
+       *
+       * @return the proxy selector, empty if no proxy is configured
+       */
+      public static Optional<ProxySelector> fromEnvironment() {
          return from( System.getenv() );
       }
 

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2026 Robert Bosch Manufacturing Solutions GmbH
+  ~
+  ~ See the AUTHORS file(s) distributed with this work for
+  ~ additional information regarding authorship.
+  ~
+  ~ This Source Code Form is subject to the terms of the Mozilla Public
+  ~ License, v. 2.0. If a copy of the MPL was not distributed with this
+  ~ file, You can obtain one at https://mozilla.org/MPL/2.0/.
+  ~
+  ~ SPDX-License-Identifier: MPL-2.0
+  -->
+
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+   <modelVersion>4.0.0</modelVersion>
+
+   <parent>
+      <groupId>org.eclipse.esmf</groupId>
+      <artifactId>aspect-model-editor-parent</artifactId>
+      <version>DEV-SNAPSHOT</version>
+   </parent>
+
+   <artifactId>aspect-model-editor-ai</artifactId>
+   <name>ESMF Aspect Model Editor AI</name>
+
+   <dependencies>
+      <!-- Multi module dependencies -->
+      <dependency>
+         <groupId>org.eclipse.esmf</groupId>
+         <artifactId>aspect-model-editor-core</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>org.eclipse.esmf</groupId>
+         <artifactId>aspect-model-editor-service</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>org.eclipse.esmf</groupId>
+         <artifactId>aspect-model-editor-validation</artifactId>
+      </dependency>
+
+      <!-- AI provider dependencies -->
+      <dependency>
+         <groupId>dev.langchain4j</groupId>
+         <artifactId>langchain4j-open-ai</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>dev.langchain4j</groupId>
+         <artifactId>langchain4j-anthropic</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>dev.langchain4j</groupId>
+         <artifactId>langchain4j-http-client-jdk</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>com.github</groupId>
+         <artifactId>copilot-sdk-java</artifactId>
+      </dependency>
+
+      <!-- Text extraction of attached PDF files -->
+      <dependency>
+         <groupId>org.apache.pdfbox</groupId>
+         <artifactId>pdfbox</artifactId>
+      </dependency>
+
+      <!-- Third party dependencies -->
+      <dependency>
+         <groupId>com.fasterxml.jackson.core</groupId>
+         <artifactId>jackson-databind</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>io.micronaut</groupId>
+         <artifactId>micronaut-http-server</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>io.micronaut.serde</groupId>
+         <artifactId>micronaut-serde-jackson</artifactId>
+      </dependency>
+      <dependency>
+         <groupId>ch.qos.logback</groupId>
+         <artifactId>logback-classic</artifactId>
+      </dependency>
+
+      <!-- Third party testing dependencies -->
+      <dependency>
+         <groupId>org.junit.jupiter</groupId>
+         <artifactId>junit-jupiter-engine</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <groupId>org.junit.jupiter</groupId>
+         <artifactId>junit-jupiter-params</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <groupId>org.mockito</groupId>
+         <artifactId>mockito-inline</artifactId>
+         <scope>test</scope>
+      </dependency>
+   </dependencies>
+</project>

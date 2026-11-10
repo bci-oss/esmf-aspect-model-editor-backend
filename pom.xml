@@ -56,6 +56,7 @@
       <module>aspect-model-editor-core</module>
       <module>aspect-model-editor-validation</module>
       <module>aspect-model-editor-service</module>
+      <module>aspect-model-editor-ai</module>
       <module>aspect-model-editor-web</module>
       <module>aspect-model-editor-runtime</module>
       <module>examples/import-plugin</module>
@@ -89,6 +90,9 @@
       <graph-support-version>1.5.0</graph-support-version>
       <jackson-annotations.version>2.22</jackson-annotations.version>
       <jackson-databind2.version>2.22.3</jackson-databind2.version>
+      <langchain4j-version>1.23.0</langchain4j-version>
+      <copilot-sdk-version>1.0.30</copilot-sdk-version>
+      <pdfbox-version>3.0.8</pdfbox-version>
 
       <!-- Versions of plugins -->
       <junit-version>5.11.3</junit-version>
@@ -157,6 +161,11 @@
          <dependency>
             <groupId>org.eclipse.esmf</groupId>
             <artifactId>aspect-model-editor-validation</artifactId>
+            <version>${project.version}</version>
+         </dependency>
+         <dependency>
+            <groupId>org.eclipse.esmf</groupId>
+            <artifactId>aspect-model-editor-ai</artifactId>
             <version>${project.version}</version>
          </dependency>
          <dependency>
@@ -407,6 +416,25 @@
             <version>${esmf-sdk-version}</version>
          </dependency>
 
+         <!-- AI dependencies -->
+         <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-bom</artifactId>
+            <version>${langchain4j-version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+         </dependency>
+         <dependency>
+            <groupId>com.github</groupId>
+            <artifactId>copilot-sdk-java</artifactId>
+            <version>${copilot-sdk-version}</version>
+         </dependency>
+         <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox-version}</version>
+         </dependency>
+
          <!-- Third party dependencies -->
          <dependency>
             <groupId>org.apache.commons</groupId>
@@ -421,6 +449,17 @@
          <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <version>${jackson-databind2.version}</version>
+         </dependency>
+         <!-- Keep the Jackson 2 core and modules aligned with jackson-databind (used by ESMF, LangChain4j and the Copilot SDK) -->
+         <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson-databind2.version}</version>
+         </dependency>
+         <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
             <version>${jackson-databind2.version}</version>
          </dependency>
          <dependency>

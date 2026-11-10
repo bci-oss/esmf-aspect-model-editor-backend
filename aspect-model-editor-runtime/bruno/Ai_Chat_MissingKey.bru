@@ -1,0 +1,29 @@
+meta {
+  name: Ai_Chat_MissingKey
+  type: http
+  seq: 141
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/ai/chat
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "requestId": "6f1d8e8a-3c1e-4c2b-9a51-3f1f0f8a7b10",
+    "provider": { "kind": "openai", "model": "gpt-4.1" },
+    "message": "Explain this model"
+  }
+}
+
+tests {
+  test("Status code is 400", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("The error code is invalid_key", function() {
+    expect(res.getBody().code).to.equal("invalid_key");
+  });
+}

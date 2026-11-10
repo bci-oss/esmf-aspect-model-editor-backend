@@ -1,0 +1,28 @@
+meta {
+  name: Ai_TestProvider_MissingKey
+  type: http
+  seq: 140
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/ai/test
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "provider": { "kind": "openai" }
+  }
+}
+
+tests {
+  test("Status code is 200 as failures are reported in the body", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("The missing key is reported as invalid_key", function() {
+    expect(res.getBody().ok).to.equal(false);
+    expect(res.getBody().code).to.equal("invalid_key");
+  });
+}

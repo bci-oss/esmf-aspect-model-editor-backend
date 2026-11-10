@@ -1,0 +1,22 @@
+meta {
+  name: Ai_GetProviders
+  type: http
+  seq: 138
+}
+
+get {
+  url: http://localhost:{{port}}/ame/api/ai/providers
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("All provider kinds are listed", function() {
+    const kinds = res.getBody().map(provider => provider.kind);
+    expect(kinds).to.include.members(["copilot", "openai", "anthropic", "azure-openai", "ollama", "lmstudio", "openai-compatible"]);
+  });
+}

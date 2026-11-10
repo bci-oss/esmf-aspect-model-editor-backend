@@ -41,6 +41,7 @@ public class ApplicationSettings {
    private static final String WORKSPACE_CONFIG_PATH = ASPECT_MODEL_PATH + File.separator + WORKSPACE_CONFIG_FILE;
    private static final String REFACTORING_HISTORY_PATH = ASPECT_MODEL_PATH + File.separator + "refactoring-history";
    private static final String PLUGINS_PATH = ASPECT_MODEL_PATH + File.separator + "plugins";
+   private static final String AI_CONVERSATIONS_PATH = ASPECT_MODEL_PATH + File.separator + "ai" + File.separator + "conversations";
 
    private ApplicationSettings() {
    }
@@ -118,6 +119,25 @@ public class ApplicationSettings {
          throw new CreateFileException( String.format(
                "Unable to create the plugins directory at: %s.",
                PLUGINS_PATH ), e );
+      }
+   }
+
+   /**
+    * Gets the directory the conversations of the AI assistant are stored in (one JSON file per conversation, no secrets).
+    * Creates the directory if it doesn't exist.
+    *
+    * @return the path to the AI conversations directory
+    * @throws CreateFileException if the directory cannot be created
+    */
+   public static Path getAiConversationsPath() {
+      try {
+         final Path conversationsPath = Path.of( AI_CONVERSATIONS_PATH );
+         FileUtils.forceMkdir( conversationsPath.toFile() );
+         return conversationsPath;
+      } catch ( final IOException e ) {
+         throw new CreateFileException( String.format(
+               "Unable to create the AI conversations directory at: %s.",
+               AI_CONVERSATIONS_PATH ), e );
       }
    }
 }
