@@ -1,0 +1,17 @@
+meta {
+  name: Ai_CancelChat_Unknown
+  type: http
+  seq: 142
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/ai/chat/6f1d8e8a-3c1e-4c2b-9a51-3f1f0f8a7b10/cancel
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 204", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

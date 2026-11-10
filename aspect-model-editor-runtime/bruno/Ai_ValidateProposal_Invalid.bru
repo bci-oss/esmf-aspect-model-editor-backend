@@ -1,0 +1,28 @@
+meta {
+  name: Ai_ValidateProposal_Invalid
+  type: http
+  seq: 147
+}
+
+post {
+  url: http://localhost:{{port}}/ame/api/ai/proposals/validate
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "turtle": "this is not turtle"
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("The proposal is reported as invalid", function() {
+    expect(res.getBody().valid).to.equal(false);
+    expect(res.getBody().validationErrors).to.not.be.empty;
+  });
+}

@@ -31,6 +31,7 @@ public final class ApplicationConstants {
       public static final String TARGET_WORKSPACE = "ame-target-workspace";
       public static final String WORKSPACE = "workspace";
       public static final String GITHUB_TOKEN = "X-AME-GitHub-Token";
+      public static final String AI_KEY = "X-Ame-Ai-Key";
 
       private Headers() {
       }

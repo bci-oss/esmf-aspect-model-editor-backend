@@ -1,0 +1,18 @@
+meta {
+  name: Ai_GetLocalServers
+  type: http
+  seq: 139
+}
+
+get {
+  url: http://localhost:{{port}}/ame/api/ai/local
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.be.an("array");
+  });
+}

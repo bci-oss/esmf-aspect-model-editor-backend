@@ -22,6 +22,7 @@ SPDX-License-Identifier: MPL-2.0
 - [Desktop integration](#desktop-integration)
 - [External editors (VS Code)](#external-editors-vs-code)
 - [Plugins](#plugins)
+- [AI assistant](#ai-assistant)
 - [Release](#release)
 - [Further documentation](#further-documentation)
 - [License](#license)
@@ -131,6 +132,40 @@ contract fixed, token-protected and independent of the backend framework.
 
 The archive format, `plugin.json` and the host API of the user interface are described in the
 [Plugins section of the editor README](https://github.com/eclipse-esmf/esmf-aspect-model-editor#plugins).
+
+## AI assistant
+
+The module [`aspect-model-editor-ai`](aspect-model-editor-ai) lets an AI explain, review and change Aspect Models,
+create new ones and generate example payloads. Supported providers are GitHub Copilot (through the
+[Copilot SDK for Java](https://github.com/github/copilot-sdk); the runtime for the current OS/architecture is bundled by
+a Maven profile of `aspect-model-editor-runtime`), OpenAI, Anthropic, Azure OpenAI, Ollama, LM Studio and any
+OpenAI-compatible server (through [LangChain4j](https://github.com/langchain4j/langchain4j)).
+
+| Endpoint (below `/ame/api`)                                    | Purpose                                                                                       |
+|----------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
+| `GET /ai/providers`                                            | The provider kinds with defaults and availability                                             |
+| `GET /ai/local`                                                | Ollama and LM Studio servers running on this machine and their models                         |
+| `POST /ai/models`, `POST /ai/test`                             | Lists the models of a provider; tests a provider (always `200`, failures as `ok: false` with `code`) |
+| `POST /ai/chat` (`text/event-stream`)                          | Sends a message; streams the events `conversation`, `delta`, `tool`, `proposal` and finally `done` or `error` |
+| `POST /ai/chat/{requestId}/cancel`                             | Cancels a running chat request (closing the stream cancels it as well)                        |
+| `GET`/`DELETE /ai/conversations`, `GET`/`PATCH`/`DELETE /ai/conversations/{id}` | Lists, reads, renames and deletes the stored conversations                   |
+| `POST /ai/proposals/validate`                                  | Validates a proposed model after the user edited it                                           |
+| `GET /ai/copilot/status`, `POST /ai/copilot/login`, `POST /ai/copilot/login/{flowId}/complete`, `DELETE /ai/copilot/login/{flowId}`, `POST /ai/copilot/token`, `POST /ai/copilot/logout` | GitHub Copilot login (device flow or token) and logout |
+
+* **API keys** are sent per request in the header `X-Ame-Ai-Key`; they are never stored or logged. GitHub Copilot uses
+  its own login instead.
+* **Proposals only:** the AI reads the model through tools and proposes changes (`proposal` events); it never writes
+  files. Applying a proposal is up to the user in the editor. Changes of read-only models are refused, invalid model
+  changes are returned to the AI for at most two corrections.
+* **Limits:** at most 8 tool rounds per message and 120 seconds per request (`ame.ai.timeout-seconds`).
+* **Conversations** are stored without secrets as one JSON file each in `~/aspect-model-editor/ai/conversations`
+  (`ame.ai.conversations-dir`); their ids are UUIDs.
+* **Local only:** with `ame.ai.local-only=true` only providers running on this machine may be used.
+* GitHub Copilot is started lazily on first use with its built-in tools and telemetry disabled and stopped with the
+  backend.
+
+Errors carry a stable `code`: `invalid_key`, `quota_exceeded`, `offline`, `timeout`, `not_authenticated`,
+`model_not_found`, `provider_error`, `local_only` or `read_only`.
 
 ## Release
 

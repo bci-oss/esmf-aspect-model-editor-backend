@@ -1,0 +1,17 @@
+meta {
+  name: Ai_GetConversation_NotFound
+  type: http
+  seq: 144
+}
+
+get {
+  url: http://localhost:{{port}}/ame/api/ai/conversations/00000000-0000-4000-8000-000000000000
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 404", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+}

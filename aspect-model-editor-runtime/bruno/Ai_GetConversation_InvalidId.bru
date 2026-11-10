@@ -1,0 +1,17 @@
+meta {
+  name: Ai_GetConversation_InvalidId
+  type: http
+  seq: 145
+}
+
+get {
+  url: http://localhost:{{port}}/ame/api/ai/conversations/not-a-uuid
+  body: none
+  auth: none
+}
+
+tests {
+  test("Status code is 404 as only UUIDs are conversation ids", function() {
+    expect(res.getStatus()).to.equal(404);
+  });
+}
