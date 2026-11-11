@@ -37,20 +37,13 @@ public class AnthropicProvider extends LangChain4jProvider {
 
    @Override
    public List<AiModelInfo> listModels( final AiProviderSettings settings ) {
-      try {
-         return AnthropicModelCatalog.builder()
-               .baseUrl( baseUrl( settings ) )
-               .apiKey( settings.apiKey() )
-               .httpClientBuilder( AiHttpClients.langChainClientBuilder( !settings.isLocal() ) )
-               .timeout( AiHttpClients.CONNECT_TIMEOUT )
-               .build()
-               .listModels()
-               .stream()
-               .map( model -> AiModelInfo.of( model.name(), model.displayName() ) )
-               .toList();
-      } catch ( final RuntimeException exception ) {
-         throw AiErrors.map( exception, settings );
-      }
+      return listModels( settings, () -> AnthropicModelCatalog.builder()
+            .baseUrl( baseUrl( settings ) )
+            .apiKey( settings.apiKey() )
+            .httpClientBuilder( httpClientBuilder( settings ) )
+            .timeout( AiHttpClients.READ_TIMEOUT )
+            .build()
+            .listModels() );
    }
 
    @Override
@@ -65,7 +58,7 @@ public class AnthropicProvider extends LangChain4jProvider {
             .apiKey( settings.apiKey() )
             .modelName( settings.model() )
             .maxTokens( MAX_OUTPUT_TOKENS )
-            .httpClientBuilder( AiHttpClients.langChainClientBuilder( !settings.isLocal() ) )
+            .httpClientBuilder( httpClientBuilder( settings ) )
             .timeout( AiHttpClients.READ_TIMEOUT )
             .build();
    }

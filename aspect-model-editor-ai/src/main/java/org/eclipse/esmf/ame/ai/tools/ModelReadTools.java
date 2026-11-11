@@ -47,7 +47,6 @@ import org.eclipse.esmf.metamodel.Units;
 final class ModelReadTools {
    private static final int MAX_RESULTS = 50;
    private static final int MAX_FILES = 500;
-   private static final String NO_MODEL_OPEN = "No model is open in the editor.";
 
    private final AiModelValidator validator;
    private final ModelService modelService;
@@ -64,7 +63,7 @@ final class ModelReadTools {
 
    AiToolResult getOpenModel( final AiChatContext context ) {
       if ( !context.hasModel() ) {
-         return AiToolResult.failure( NO_MODEL_OPEN, "No model open" );
+         return ToolFailures.noModelOpen();
       }
       return AiToolResult.ok( wrap( context.modelTurtle(), context.fileName() ), "Read the open model" );
    }
@@ -76,7 +75,7 @@ final class ModelReadTools {
             return AiToolResult.ok( wrap( element.get(), context.fileName() ), "Read " + TurtleElements.localName( urn ) );
          }
       }
-      final Optional<AspectModelResult> file = modelService.getUnresolvedModel( parseUrn( urn ) );
+      final Optional<AspectModelResult> file = modelService.getUnresolvedModel( ToolArguments.urn( urn ) );
       final Optional<String> element = file.flatMap( result -> extractQuietly( result.content(), urn ) );
       if ( element.isEmpty() ) {
          return AiToolResult.failure( "The element " + urn + " was not found in the open model or the workspace.", "Not found" );
@@ -113,7 +112,7 @@ final class ModelReadTools {
 
    AiToolResult getValidationErrors( final AiChatContext context ) {
       if ( !context.hasModel() ) {
-         return AiToolResult.failure( NO_MODEL_OPEN, "No model open" );
+         return ToolFailures.noModelOpen();
       }
       final List<AiValidationError> errors = context.validationErrors() != null
             ? context.validationErrors()
@@ -125,7 +124,7 @@ final class ModelReadTools {
    }
 
    AiToolResult findUsages( final String urn ) {
-      final AspectModelUrn aspectModelUrn = parseUrn( urn );
+      final AspectModelUrn aspectModelUrn = ToolArguments.urn( urn );
       final ElementUsageReport report;
       try {
          report = elementUsageService.findUsages( aspectModelUrn );
@@ -170,7 +169,7 @@ final class ModelReadTools {
 
    AiToolResult generateSamplePayload( final AiChatContext context ) {
       if ( !context.hasModel() ) {
-         return AiToolResult.failure( NO_MODEL_OPEN, "No model open" );
+         return ToolFailures.noModelOpen();
       }
       final String json = validator.samplePayload( context.modelTurtle(), context.namespace(), context.version(), context.fileName() );
       return AiToolResult.ok( json, "Generated a sample payload" );
@@ -189,10 +188,6 @@ final class ModelReadTools {
    private String describe( final WorkspaceFile file ) {
       return file.namespace() + ":" + file.version() + "/" + file.fileName()
             + ( workspaceReferenceService.isReadOnly( file.path() ) ? " (read-only)" : "" );
-   }
-
-   private static AspectModelUrn parseUrn( final String urn ) {
-      return AspectModelUrn.from( urn ).toJavaOptional().orElseThrow( () -> new IllegalArgumentException( "Invalid URN: " + urn ) );
    }
 
    private static String unitText( final Unit unit ) {

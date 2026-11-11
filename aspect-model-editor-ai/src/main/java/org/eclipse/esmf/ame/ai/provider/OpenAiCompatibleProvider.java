@@ -43,23 +43,16 @@ public class OpenAiCompatibleProvider extends LangChain4jProvider {
 
    @Override
    public List<AiModelInfo> listModels( final AiProviderSettings settings ) {
-      try {
-         return OpenAiModelCatalog.builder()
-               .baseUrl( settings.baseUrl() )
-               .apiKey( bearerKey( settings ) )
-               .customHeaders( headers( settings ) )
-               .customQueryParams( queryParams( settings ) )
-               .httpClientBuilder( AiHttpClients.langChainClientBuilder( !settings.isLocal() ) )
-               .connectTimeout( AiHttpClients.CONNECT_TIMEOUT )
-               .readTimeout( AiHttpClients.CONNECT_TIMEOUT )
-               .build()
-               .listModels()
-               .stream()
-               .map( model -> AiModelInfo.of( model.name(), model.displayName() ) )
-               .toList();
-      } catch ( final RuntimeException exception ) {
-         throw AiErrors.map( exception, settings );
-      }
+      return listModels( settings, () -> OpenAiModelCatalog.builder()
+            .baseUrl( settings.baseUrl() )
+            .apiKey( bearerKey( settings ) )
+            .customHeaders( headers( settings ) )
+            .customQueryParams( queryParams( settings ) )
+            .httpClientBuilder( httpClientBuilder( settings ) )
+            .connectTimeout( AiHttpClients.CONNECT_TIMEOUT )
+            .readTimeout( AiHttpClients.READ_TIMEOUT )
+            .build()
+            .listModels() );
    }
 
    @Override
@@ -85,7 +78,7 @@ public class OpenAiCompatibleProvider extends LangChain4jProvider {
             .modelName( settings.model() )
             .customHeaders( headers( settings ) )
             .customQueryParams( queryParams( settings ) )
-            .httpClientBuilder( AiHttpClients.langChainClientBuilder( !settings.isLocal() ) )
+            .httpClientBuilder( httpClientBuilder( settings ) )
             .timeout( AiHttpClients.READ_TIMEOUT )
             .build();
    }

@@ -16,15 +16,22 @@ import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
- * Cancels a running chat turn, e.g. when the user presses stop, closes the stream or the timeout elapses.
+ * Cancels a running chat turn, e.g. when the user presses stop, closes the stream or the timeout elapses. Cancellation is
+ * best effort: the registered callbacks ask the provider to stop and the providers check {@link #throwIfCancelled()}
+ * between steps, but a provider may still finish the step it is running.
  */
 public final class AiCancellation {
+   private static final Logger LOG = LoggerFactory.getLogger( AiCancellation.class );
+
    private final List<Runnable> callbacks = new CopyOnWriteArrayList<>();
    private volatile boolean cancelled;
 
    /**
-    * Cancels the turn and runs the registered callbacks once.
+    * Cancels the turn and runs the registered callbacks once. Failing callbacks are logged and do not stop the others.
     */
    public void cancel() {
       if ( cancelled ) {
@@ -63,8 +70,10 @@ public final class AiCancellation {
    private static void runQuietly( final Runnable callback ) {
       try {
          callback.run();
-      } catch ( final RuntimeException ignored ) {
+      } catch ( final RuntimeException exception ) {
          // cancelling is best effort
+         LOG.warn( "A cancellation callback failed: {}", exception.getMessage() );
+         LOG.debug( "Cancellation callback failure", exception );
       }
    }
 }

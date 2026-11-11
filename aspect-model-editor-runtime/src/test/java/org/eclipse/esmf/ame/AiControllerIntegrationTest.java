@@ -35,6 +35,7 @@ import java.util.stream.Stream;
 
 import org.eclipse.esmf.ame.ai.AiErrorCode;
 import org.eclipse.esmf.ame.ai.AiException;
+import org.eclipse.esmf.ame.ai.attachment.AttachmentTextExtractor;
 import org.eclipse.esmf.ame.ai.copilot.CopilotGateway;
 import org.eclipse.esmf.ame.ai.model.copilot.CopilotDeviceLogin;
 import org.eclipse.esmf.ame.ai.model.copilot.CopilotStatus;
@@ -59,7 +60,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 /**
- * Checks the AI endpoints over HTTP with a scripted AI provider instead of a real one.
+ * Checks the AI endpoints over HTTP with a scripted AI provider instead of a real one. The endpoints are served by several
+ * controllers ({@code AiProviderController}, {@code AiChatController}, {@code AiConversationController},
+ * {@code AiAttachmentController}, {@code AiProposalController} and {@code AiCopilotController}) below {@code /ame/api/ai}.
  */
 @MicronautTest
 @Property( name = "ame.ai.conversations-dir", value = AiControllerIntegrationTest.CONVERSATIONS )
@@ -234,6 +237,15 @@ class AiControllerIntegrationTest {
       final HttpResponse<String> empty = upload( "empty.txt", "  \n" );
       assertEquals( 400, empty.statusCode() );
       assertEquals( "attachment_empty", JSON.readTree( empty.body() ).get( "code" ).asText() );
+   }
+
+   @Test
+   void rejectsTooLargeAttachments() throws Exception {
+      final HttpResponse<String> tooLarge = upload( "big.txt", "a".repeat( (int) AttachmentTextExtractor.MAX_FILE_SIZE + 1 ) );
+      assertEquals( 413, tooLarge.statusCode() );
+      final JsonNode error = JSON.readTree( tooLarge.body() );
+      assertEquals( "attachment_too_large", error.get( "code" ).asText() );
+      assertEquals( AttachmentTextExtractor.TOO_LARGE_MESSAGE, error.get( "message" ).asText() );
    }
 
    private HttpResponse<String> upload( final String fileName, final String content ) throws IOException, InterruptedException {

@@ -12,10 +12,14 @@
  */
 package org.eclipse.esmf.ame.ai.tools;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
+import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
+
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.core.annotation.Nullable;
 
 /**
@@ -24,6 +28,24 @@ import io.micronaut.core.annotation.Nullable;
  */
 final class ToolArguments {
    private ToolArguments() {
+   }
+
+   /**
+    * @param argumentsJson the arguments of the tool call; blank means no arguments
+    * @return the parsed arguments
+    * @throws IOException if the arguments are not valid JSON
+    */
+   static JsonNode parse( final ObjectMapper objectMapper, final @Nullable String argumentsJson ) throws IOException {
+      return argumentsJson == null || argumentsJson.isBlank()
+            ? objectMapper.createObjectNode()
+            : objectMapper.readTree( argumentsJson );
+   }
+
+   /**
+    * @throws IllegalArgumentException if the text is not a valid URN
+    */
+   static AspectModelUrn urn( final String urn ) {
+      return AspectModelUrn.from( urn ).toJavaOptional().orElseThrow( () -> new IllegalArgumentException( "Invalid URN: " + urn ) );
    }
 
    static String required( final JsonNode args, final String field ) {
@@ -57,6 +79,11 @@ final class ToolArguments {
    static @Nullable String optional( final JsonNode args, final String field ) {
       final JsonNode value = args.get( field );
       return value == null || value.isNull() ? null : value.asText();
+   }
+
+   static String optional( final JsonNode args, final String field, final String fallback ) {
+      final String value = optional( args, field );
+      return value == null ? fallback : value;
    }
 
    static String title( final JsonNode args, final String fallback ) {

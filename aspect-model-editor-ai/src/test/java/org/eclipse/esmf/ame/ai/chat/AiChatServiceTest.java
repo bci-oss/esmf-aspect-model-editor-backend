@@ -52,8 +52,10 @@ import org.eclipse.esmf.ame.ai.model.proposal.AiProposal;
 import org.eclipse.esmf.ame.ai.model.provider.AiProviderConfig;
 import org.eclipse.esmf.ame.ai.model.validation.AiValidationError;
 import org.eclipse.esmf.ame.ai.model.validation.AiValidationResult;
+import org.eclipse.esmf.ame.ai.provider.AiCancellation;
 import org.eclipse.esmf.ame.ai.provider.AiChatResult;
 import org.eclipse.esmf.ame.ai.provider.AiProviderFactory;
+import org.eclipse.esmf.ame.ai.provider.AiProviderSettings;
 import org.eclipse.esmf.ame.ai.tools.AiModelValidator;
 import org.eclipse.esmf.ame.ai.tools.AiTools;
 import org.eclipse.esmf.ame.services.ModelService;
@@ -347,6 +349,21 @@ class AiChatServiceTest {
    }
 
    @Test
+   void letsErrorsOfTheProviderPassButUnregistersTheRequest() {
+      provider.setScript( ( settings, turn, listener ) -> {
+         throw new LinkageError( "broken provider" );
+      } );
+      final AiChatRequest request = request( "r-error", null, model() );
+      final List<AiChatEvent> events = new CopyOnWriteArrayList<>();
+
+      assertThrows( LinkageError.class, () -> service.run( request, AiProviderSettings.of( request.provider(), API_KEY ), provider, null,
+            new AiCancellation(), events::add ) );
+
+      assertEquals( AiChatEvent.CONVERSATION, events.getFirst().name() );
+      assertFalse( service.cancel( "r-error" ) );
+   }
+
+   @Test
    void enforcesTheLocalOnlyMode() {
       service = new AiChatService( new AiProviderFactory( List.of( provider ), true ),
             new AiTools( validator, mock( ModelService.class ), mock( ElementUsageService.class ), mock( WorkspaceReferenceService.class ),
@@ -361,9 +378,9 @@ class AiChatServiceTest {
 
    @Test
    void createsTitles() {
-      assertEquals( "Explain", AiChatService.title( new AiChatRequest( null, "r", null, "", "explain", null ) ) );
-      final String title = AiChatService.title( new AiChatRequest( null, "r", null, "word ".repeat( 40 ), null, null ) );
-      assertTrue( title.length() <= AiChatService.MAX_TITLE_LENGTH );
+      assertEquals( "Explain", ChatConversations.title( new AiChatRequest( null, "r", null, "", "explain", null ) ) );
+      final String title = ChatConversations.title( new AiChatRequest( null, "r", null, "word ".repeat( 40 ), null, null ) );
+      assertTrue( title.length() <= ChatConversations.MAX_TITLE_LENGTH );
       assertTrue( title.endsWith( "…" ) );
    }
 

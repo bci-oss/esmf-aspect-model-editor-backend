@@ -238,10 +238,20 @@ class AttachmentTextExtractorTest {
    }
 
    @Test
+   void checksTheFileSizeWithOneMessage() {
+      AttachmentTextExtractor.checkFileSize( AttachmentTextExtractor.MAX_FILE_SIZE );
+      final AiException exception = assertThrows( AiException.class,
+            () -> AttachmentTextExtractor.checkFileSize( AttachmentTextExtractor.MAX_FILE_SIZE + 1 ) );
+      assertEquals( AiErrorCode.ATTACHMENT_TOO_LARGE, exception.getCode() );
+      assertEquals( "The file is larger than 20 MB.", exception.getMessage() );
+      assertEquals( AttachmentTextExtractor.TOO_LARGE_MESSAGE, exception.getMessage() );
+   }
+
+   @Test
    void convertsCellReferencesToColumns() {
-      assertEquals( 0, AttachmentTextExtractor.column( "A1" ) );
-      assertEquals( 25, AttachmentTextExtractor.column( "Z9" ) );
-      assertEquals( 26, AttachmentTextExtractor.column( "AA10" ) );
-      assertEquals( 0, AttachmentTextExtractor.column( "1" ) );
+      assertEquals( 0, XlsxSheetReader.column( "A1" ) );
+      assertEquals( 25, XlsxSheetReader.column( "Z9" ) );
+      assertEquals( 26, XlsxSheetReader.column( "AA10" ) );
+      assertEquals( 0, XlsxSheetReader.column( "1" ) );
    }
 }

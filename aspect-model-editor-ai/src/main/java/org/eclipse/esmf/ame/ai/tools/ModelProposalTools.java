@@ -15,6 +15,7 @@ package org.eclipse.esmf.ame.ai.tools;
 import static org.eclipse.esmf.ame.ai.tools.ToolArguments.oneOf;
 import static org.eclipse.esmf.ame.ai.tools.ToolArguments.optional;
 import static org.eclipse.esmf.ame.ai.tools.ToolArguments.required;
+import static org.eclipse.esmf.ame.ai.tools.ToolArguments.text;
 import static org.eclipse.esmf.ame.ai.tools.ToolArguments.title;
 import static org.eclipse.esmf.ame.ai.tools.ToolOutput.formatErrors;
 import static org.eclipse.esmf.ame.ai.tools.ToolOutput.plural;
@@ -34,7 +35,6 @@ import org.eclipse.esmf.ame.ai.model.proposal.AiRefactoringProposal;
 import org.eclipse.esmf.ame.ai.model.proposal.AiReviewFinding;
 import org.eclipse.esmf.ame.ai.model.validation.AiValidationResult;
 import org.eclipse.esmf.ame.constants.ApplicationConstants;
-import org.eclipse.esmf.aspectmodel.urn.AspectModelUrn;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,8 +45,6 @@ import io.micronaut.core.annotation.Nullable;
  */
 final class ModelProposalTools {
    private static final Pattern ELEMENT_NAME = Pattern.compile( "[A-Za-z][A-Za-z0-9_-]*" );
-   private static final String READ_ONLY_MESSAGE = "read_only: The open model comes from a read-only source and must not be changed. "
-         + "Explain the change instead, or propose a copy with proposeNewModel.";
 
    private final ObjectMapper objectMapper;
    private final AiModelValidator validator;
@@ -59,7 +57,7 @@ final class ModelProposalTools {
    AiToolResult proposeModelChange( final AiToolSession session, final JsonNode args ) {
       final AiChatContext context = session.context();
       if ( context.isReadOnly() ) {
-         return AiToolResult.failure( READ_ONLY_MESSAGE, "read_only" );
+         return ToolFailures.readOnly();
       }
       if ( !context.hasModel() ) {
          return AiToolResult.failure( "No model is open in the editor; use proposeNewModel instead.", "No model open" );
@@ -94,13 +92,11 @@ final class ModelProposalTools {
 
    AiToolResult proposeRename( final AiToolSession session, final JsonNode args ) {
       if ( session.context().isReadOnly() ) {
-         return AiToolResult.failure( READ_ONLY_MESSAGE, "read_only" );
+         return ToolFailures.readOnly();
       }
       final String urn = required( args, "urn" );
       final String newName = required( args, "newName" );
-      if ( AspectModelUrn.from( urn ).toJavaOptional().isEmpty() ) {
-         throw new IllegalArgumentException( "Invalid URN: " + urn );
-      }
+      ToolArguments.urn( urn );
       if ( !ELEMENT_NAME.matcher( newName ).matches() ) {
          throw new IllegalArgumentException( "Invalid element name: " + newName );
       }
@@ -117,7 +113,7 @@ final class ModelProposalTools {
       }
       final List<AiPayloadVariant> payload = new ArrayList<>();
       for ( final JsonNode variant : variants ) {
-         final String name = variant.hasNonNull( "name" ) ? variant.get( "name" ).asText() : "Variant " + ( payload.size() + 1 );
+         final String name = optional( variant, "name", "Variant " + ( payload.size() + 1 ) );
          payload.add( new AiPayloadVariant( name, prettyJson( name, variant.get( "json" ) ) ) );
       }
       session.propose( new AiProposal( newId(), AiProposal.PAYLOAD, title( args, "Example payloads" ), null, null, null, null, null,
@@ -133,7 +129,7 @@ final class ModelProposalTools {
       }
       final List<AiReviewFinding> findings = new ArrayList<>();
       for ( final JsonNode item : items ) {
-         final String message = item.hasNonNull( "message" ) ? item.get( "message" ).asText() : "";
+         final String message = text( item, "message" );
          if ( message.isBlank() ) {
             continue;
          }

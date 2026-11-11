@@ -21,7 +21,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
+import org.eclipse.esmf.ame.ai.model.provider.AiModelInfo;
 
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
@@ -30,6 +32,8 @@ import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.http.client.jdk.JdkHttpClientBuilder;
+import dev.langchain4j.model.catalog.ModelDescription;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
@@ -58,6 +62,33 @@ public abstract class LangChain4jProvider implements AiProvider {
     */
    protected AiProviderSettings resolveModel( final AiProviderSettings settings ) {
       return settings;
+   }
+
+   /**
+    * Creates the HTTP client builder for a request with the default timeouts; servers on localhost are called without proxy.
+    *
+    * @param settings the provider settings
+    * @return a new builder
+    */
+   protected JdkHttpClientBuilder httpClientBuilder( final AiProviderSettings settings ) {
+      return AiHttpClients.langChainClientBuilder( !settings.isLocal() );
+   }
+
+   /**
+    * Lists the models of a provider with a LangChain4j model catalog; failures are mapped to the stable error codes.
+    *
+    * @param settings the provider settings
+    * @param catalog lists the models
+    * @return the models
+    */
+   protected static List<AiModelInfo> listModels( final AiProviderSettings settings, final Supplier<List<ModelDescription>> catalog ) {
+      try {
+         return catalog.get().stream()
+               .map( model -> AiModelInfo.of( model.name(), model.displayName() ) )
+               .toList();
+      } catch ( final RuntimeException exception ) {
+         throw AiErrors.map( exception, settings );
+      }
    }
 
    @Override

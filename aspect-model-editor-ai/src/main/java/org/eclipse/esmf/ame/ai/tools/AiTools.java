@@ -178,11 +178,9 @@ public class AiTools {
    public AiToolResult execute( final AiToolSession session, final String name, final @Nullable String argumentsJson ) {
       final JsonNode args;
       try {
-         args = argumentsJson == null || argumentsJson.isBlank()
-               ? objectMapper.createObjectNode()
-               : objectMapper.readTree( argumentsJson );
+         args = ToolArguments.parse( objectMapper, argumentsJson );
       } catch ( final IOException e ) {
-         return AiToolResult.failure( "Error: the arguments are not valid JSON: " + e.getMessage(), "Invalid arguments" );
+         return ToolFailures.invalidJson( e );
       }
       try {
          return switch ( name ) {
@@ -203,14 +201,13 @@ public class AiTools {
             case PROPOSE_RENAME -> proposalTools.proposeRename( session, args );
             case PROPOSE_PAYLOAD -> proposalTools.proposePayload( session, args );
             case REPORT_REVIEW -> proposalTools.reportReview( session, args );
-            default -> AiToolResult.failure( "Error: unknown tool '" + name + "'.", "Unknown tool" );
+            default -> ToolFailures.unknownTool( name );
          };
       } catch ( final IllegalArgumentException e ) {
-         return AiToolResult.failure( "Error: " + e.getMessage(), e.getMessage() );
+         return ToolFailures.invalidArgument( e );
       } catch ( final RuntimeException e ) {
          LOG.debug( "AI tool {} failed", name, e );
-         final String message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-         return AiToolResult.failure( "Error: " + message, "Failed" );
+         return ToolFailures.failed( e );
       }
    }
 }

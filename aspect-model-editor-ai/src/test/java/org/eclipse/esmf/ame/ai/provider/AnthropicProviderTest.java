@@ -18,11 +18,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.esmf.ame.ai.AiErrorCode;
 import org.eclipse.esmf.ame.ai.AiException;
 import org.eclipse.esmf.ame.ai.model.provider.AiModelInfo;
 import org.eclipse.esmf.ame.ai.model.provider.AiProviderConfig;
+
+import dev.langchain4j.http.client.jdk.JdkHttpClientBuilder;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -125,6 +128,25 @@ class AnthropicProviderTest {
 
       assertEquals( List.of( new AiModelInfo( "claude-a", "Claude A" ) ), models );
       assertEquals( KEY, server.requests().getFirst().header( "x-api-key" ) );
+   }
+
+   @Test
+   void listsModelsWithTheReadTimeoutOfChats() {
+      server.enqueue( "/v1/models", MockAiServer.Response.json( 200, "{\"data\":[],\"has_more\":false}" ) );
+      final List<JdkHttpClientBuilder> builders = new CopyOnWriteArrayList<>();
+      final AnthropicProvider recording = new AnthropicProvider() {
+         @Override
+         protected JdkHttpClientBuilder httpClientBuilder( final AiProviderSettings settings ) {
+            final JdkHttpClientBuilder builder = super.httpClientBuilder( settings );
+            builders.add( builder );
+            return builder;
+         }
+      };
+
+      recording.listModels( settings() );
+
+      assertEquals( 1, builders.size() );
+      assertEquals( AiHttpClients.READ_TIMEOUT, builders.getFirst().readTimeout() );
    }
 
    @Test

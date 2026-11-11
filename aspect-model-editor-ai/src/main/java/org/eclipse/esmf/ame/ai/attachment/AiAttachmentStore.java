@@ -23,8 +23,8 @@ import io.micronaut.core.annotation.Nullable;
 import jakarta.inject.Singleton;
 
 /**
- * Keeps the extracted text of attached files in memory. Attachments are not persisted; the oldest are dropped when the
- * store is full.
+ * Keeps the extracted text of attached files in memory. Attachments are not persisted; when more than
+ * {@link #MAX_ATTACHMENTS} are kept, the least recently used one (added or read) is dropped.
  */
 @Singleton
 public class AiAttachmentStore {
